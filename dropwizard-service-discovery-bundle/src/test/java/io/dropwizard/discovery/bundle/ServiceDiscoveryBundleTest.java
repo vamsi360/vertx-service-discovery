@@ -90,10 +90,10 @@ public class ServiceDiscoveryBundleTest {
         testingCluster.start();
 
         serviceDiscoveryConfiguration = ServiceDiscoveryConfiguration.builder()
-                                    .zookeeperConnectionString(testingCluster.getConnectString())
+                                    .zookeeper(testingCluster.getConnectString())
                                     .namespace("test")
                                     .environment("testing")
-                                    .connectionRetryInterval(5000)
+                                    .connectionRetryIntervalMillis(5000)
                                     .publishedHost("TestHost")
                                     .publishedPort(80)
                                     .build();
