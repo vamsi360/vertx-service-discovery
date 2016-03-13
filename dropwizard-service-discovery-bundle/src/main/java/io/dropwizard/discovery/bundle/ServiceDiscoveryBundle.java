@@ -66,7 +66,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         serviceDiscoveryConfiguration = getRangerConfiguration(configuration);
         val objectMapper = environment.getObjectMapper();
         CuratorFramework curator = CuratorFrameworkFactory.newClient(
-                                            serviceDiscoveryConfiguration.getZookeeperConnectionString(),
+                                            serviceDiscoveryConfiguration.getZookeeper(),
                                             new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryInterval()));
         final String namespace = serviceDiscoveryConfiguration.getNamespace();
         final String serviceName = getServiceName(configuration);

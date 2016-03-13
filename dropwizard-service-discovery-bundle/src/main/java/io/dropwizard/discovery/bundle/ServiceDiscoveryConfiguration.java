@@ -44,11 +44,11 @@ public class ServiceDiscoveryConfiguration {
 
     @NotNull
     @NotEmpty
-    private String zookeeperConnectionString;
+    private String zookeeper;
 
     @Min(1000)
     @Max(60000)
-    private int connectionRetryInterval;
+    private int connectionRetryIntervalMillis = 5000;
 
     @NotNull
     @NotEmpty
