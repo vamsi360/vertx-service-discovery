@@ -23,10 +23,10 @@
     </distributionManagement>
 
     <scm>
-        <connection>scm:git:https://github.com/santanusinha/dropwizard-db-sharding-bundle</connection>
-        <developerConnection>scm:git:https://github.com/santanusinha/dropwizard-db-sharding-bundle</developerConnection>
+        <connection>scm:git:https://github.com/santanusinha/dropwizard-service-discovery.git</connection>
+        <developerConnection>scm:git:https://github.com/santanusinha/dropwizard-service-discovery.git</developerConnection>
         <tag>HEAD</tag>
-        <url>https://github.com/santanusinha/dropwizard-db-sharding-bundle</url>
+        <url>https://github.com/santanusinha/dropwizard-service-discovery.git</url>
     </scm>
 
     <licenses>
@@ -45,6 +45,14 @@
             <email>santanu.sinha@gmail.com</email>
         </developer>
     </developers>
+
+    <repositories>
+        <repository>
+            <id>clojars</id>
+            <name>Clojars repository</name>
+            <url>https://clojars.org/repo</url>
+        </repository>
+    </repositories>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
