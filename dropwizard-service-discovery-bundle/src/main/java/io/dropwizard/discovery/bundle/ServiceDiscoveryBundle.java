@@ -68,13 +68,15 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     public void run(T configuration, Environment environment) throws Exception {
         serviceDiscoveryConfiguration = getRangerConfiguration(configuration);
         val objectMapper = environment.getObjectMapper();
-        CuratorFramework curator = CuratorFrameworkFactory.newClient(
-                                            serviceDiscoveryConfiguration.getZookeeper(),
-                                            new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()));
         final String namespace = serviceDiscoveryConfiguration.getNamespace();
         final String serviceName = getServiceName(configuration);
         final String hostname = getHost();
         final int port = getPort(configuration);
+        CuratorFramework curator = CuratorFrameworkFactory.builder()
+                .connectString(serviceDiscoveryConfiguration.getZookeeper())
+                .namespace(namespace)
+                .retryPolicy(new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()))
+                .build();
 
         serviceProvider = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
