@@ -52,10 +52,10 @@ public class ServiceDiscoveryConfiguration {
 
     @NotNull
     @NotEmpty
-    private String publishedHost = Constants.LOCALHOST;
+    private String publishedHost = Constants.DEFAULT_HOST;
 
     @NotNull
     @Min(-1)
     @Max(65535)
-    private int publishedPort = Constants.LOCALPORT;
+    private int publishedPort = Constants.DEFAULT_PORT;
 }

@@ -17,10 +17,13 @@
 
 package io.dropwizard.discovery.bundle;
 
+import com.fasterxml.jackson.dataformat.yaml.snakeyaml.scanner.Constant;
 import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.serviceprovider.ServiceProvider;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
@@ -131,13 +134,22 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
 
     protected abstract String getServiceName(T configuration);
 
-    protected abstract int getPort(T configuration);
+    protected int getPort(T configuration) {
+        Preconditions.checkArgument(
+                Constants.DEFAULT_PORT != serviceDiscoveryConfiguration.getPublishedPort()
+                && 0 != serviceDiscoveryConfiguration.getPublishedPort(),
+                "Looks like publishedPost has not been set and getPort() has not been overridden. This is wrong. \n" +
+                    "Either set publishedPort in config or override getPort() to return the port on which the service is running");
+        return serviceDiscoveryConfiguration.getPublishedPort();
+    }
 
     protected String getHost() throws Exception {
-        if(serviceDiscoveryConfiguration.getPublishedHost().equals(Constants.LOCALHOST)) {
+        final String host = serviceDiscoveryConfiguration.getPublishedHost();
+
+        if(Strings.isNullOrEmpty(host) || host.equals(Constants.DEFAULT_HOST)) {
             return InetAddress.getLocalHost().getCanonicalHostName();
         }
-        return serviceDiscoveryConfiguration.getPublishedHost();
+        return host;
     }
 
     public void registerHealthcheck(Healthcheck healthcheck) {

@@ -22,10 +22,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.model.ServiceNode;
 import io.dropwizard.Configuration;
+import io.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.jersey.DropwizardResourceConfig;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
-import io.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
 
 
 @Slf4j
-public class ServiceDiscoveryBundleTest {
+public class ServiceDiscoveryBundleCustomHostPortTest {
 
     private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
@@ -63,6 +63,16 @@ public class ServiceDiscoveryBundleTest {
         @Override
         protected String getServiceName(Configuration configuration) {
             return "TestService";
+        }
+
+        @Override
+        protected int getPort(Configuration configuration) {
+            return 21000;
+        }
+
+        @Override
+        protected String getHost() throws Exception {
+            return "CustomHost";
         }
 
     };
@@ -119,8 +129,8 @@ public class ServiceDiscoveryBundleTest {
         System.out.println(environment.getObjectMapper().writeValueAsString(info));
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
-        assertEquals("TestHost", info.get().getHost());
-        assertEquals(8021, info.get().getPort());
+        assertEquals("CustomHost", info.get().getHost());
+        assertEquals(21000, info.get().getPort());
         status = HealthcheckStatus.unhealthy;
 
         Thread.sleep(10000);

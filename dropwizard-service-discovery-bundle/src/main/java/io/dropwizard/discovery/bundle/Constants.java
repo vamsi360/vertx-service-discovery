@@ -20,9 +20,8 @@ package io.dropwizard.discovery.bundle;
 /**
  * Constants
  */
-public class Constants {
-    public static final String LOCALHOST = "__DEFAULT_SERVICE_HOST";
-    public static final int LOCALPORT = -1;
+public interface Constants {
+    String DEFAULT_HOST = "__DEFAULT_SERVICE_HOST";
+    int DEFAULT_PORT = -1;
 
-    private Constants() {}
 }
