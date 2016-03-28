@@ -17,7 +17,6 @@
 
 package io.dropwizard.discovery.bundle;
 
-import com.fasterxml.jackson.dataformat.yaml.snakeyaml.scanner.Constant;
 import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
@@ -27,9 +26,9 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
-import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.discovery.client.io.dropwizard.ranger.ServiceDiscoveryClient;
 import io.dropwizard.discovery.common.ShardInfo;
+import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.Getter;
@@ -51,6 +50,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private List<Healthcheck> healthchecks = Lists.newArrayList();
     private ServiceProvider<ShardInfo> serviceProvider;
+    @Getter
+    private CuratorFramework curator;
 
     @Getter
     private ServiceDiscoveryClient serviceDiscoveryClient;
@@ -72,7 +73,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final String serviceName = getServiceName(configuration);
         final String hostname = getHost();
         final int port = getPort(configuration);
-        CuratorFramework curator = CuratorFrameworkFactory.builder()
+        curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
                 .namespace(namespace)
                 .retryPolicy(new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()))
