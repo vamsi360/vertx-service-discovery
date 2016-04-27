@@ -7,7 +7,7 @@
     <groupId>io.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery</artifactId>
     <packaging>pom</packaging>
-    <version>0.9.2</version>
+    <version>1.0.0-rc2-SNAPSHOT</version>
     <modules>
         <module>dropwizard-service-discovery-common</module>
         <module>dropwizard-service-discovery-client</module>
