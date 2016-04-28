@@ -29,6 +29,7 @@ import io.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.jersey.DropwizardResourceConfig;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
+import io.dropwizard.setup.AdminEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
@@ -42,8 +43,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 
 @Slf4j
@@ -87,6 +88,9 @@ public class ServiceDiscoveryBundleRotationTest {
         when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
         when(environment.healthChecks()).thenReturn(healthChecks);
         when(environment.getObjectMapper()).thenReturn(new ObjectMapper());
+        AdminEnvironment adminEnvironment = mock(AdminEnvironment.class);
+        doNothing().when(adminEnvironment).addTask(any());
+        when(environment.admin()).thenReturn(adminEnvironment);
 
         testingCluster.start();
 

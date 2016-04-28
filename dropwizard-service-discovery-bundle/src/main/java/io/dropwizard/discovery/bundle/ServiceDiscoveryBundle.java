@@ -27,6 +27,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
+import io.dropwizard.discovery.bundle.rotationstatus.BIRTask;
+import io.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.dropwizard.discovery.client.io.dropwizard.ranger.ServiceDiscoveryClient;
 import io.dropwizard.discovery.common.ShardInfo;
@@ -112,16 +114,9 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                     }
                     return HealthcheckStatus.healthy;
                 })
-                .withHealthcheck(() -> {
-                    if (rotationStatus.status()) {
-                        log.info("Healthy");
-                        return HealthcheckStatus.healthy;
-                    }
-                    else {
-                        log.info("Unhealthy");
-                        return HealthcheckStatus.unhealthy;
-                    }
-                })
+                .withHealthcheck(() -> (rotationStatus.status())
+                            ? HealthcheckStatus.healthy
+                            : HealthcheckStatus.unhealthy)
                 .buildServiceDiscovery();
 
         serviceDiscoveryClient = ServiceDiscoveryClient.fromCurator()
@@ -149,6 +144,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         });
 
         environment.jersey().register(new InfoResource(serviceDiscoveryClient));
+        environment.admin().addTask(new OORTask(rotationStatus));
+        environment.admin().addTask(new BIRTask(rotationStatus));
     }
 
     protected abstract ServiceDiscoveryConfiguration getRangerConfiguration(T configuration);
