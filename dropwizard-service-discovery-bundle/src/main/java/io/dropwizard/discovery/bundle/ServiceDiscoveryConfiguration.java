@@ -58,4 +58,6 @@ public class ServiceDiscoveryConfiguration {
     @Min(-1)
     @Max(65535)
     private int publishedPort = Constants.DEFAULT_PORT;
+
+    private boolean initialRotationStatus = true;
 }

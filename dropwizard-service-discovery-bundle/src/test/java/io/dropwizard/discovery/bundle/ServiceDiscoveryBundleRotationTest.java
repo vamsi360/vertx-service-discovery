@@ -22,6 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.model.ServiceNode;
 import io.dropwizard.Configuration;
+import io.dropwizard.discovery.bundle.rotationstatus.BIRTask;
+import io.dropwizard.discovery.bundle.rotationstatus.OORTask;
+import io.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.jersey.DropwizardResourceConfig;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
@@ -44,7 +47,7 @@ import static org.mockito.Mockito.when;
 
 
 @Slf4j
-public class ServiceDiscoveryBundleCustomHostPortTest {
+public class ServiceDiscoveryBundleRotationTest {
 
     private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
@@ -65,16 +68,6 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
             return "TestService";
         }
 
-        @Override
-        protected int getPort(Configuration configuration) {
-            return 21000;
-        }
-
-        @Override
-        protected String getHost() throws Exception {
-            return "CustomHost";
-        }
-
     };
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
@@ -83,6 +76,8 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private HealthcheckStatus status = HealthcheckStatus.healthy;
+
+    private RotationStatus rotationStatus;
 
     @Before
     public void setup() throws Exception {
@@ -107,6 +102,8 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
         bundle.initialize(bootstrap);
 
         bundle.run(configuration, environment);
+        rotationStatus = bundle.getRotationStatus();
+
         final AtomicBoolean started = new AtomicBoolean(false);
         executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
             try {
@@ -121,7 +118,6 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
             log.debug("Waiting for framework to start...");
         }
 
-        bundle.registerHealthcheck(() -> status);
     }
 
     @Test
@@ -130,12 +126,25 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
         System.out.println(environment.getObjectMapper().writeValueAsString(info));
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
-        assertEquals("CustomHost", info.get().getHost());
-        assertEquals(21000, info.get().getPort());
-        status = HealthcheckStatus.unhealthy;
+        assertEquals("TestHost", info.get().getHost());
+        assertEquals(8021, info.get().getPort());
+
+
+        //status = HealthcheckStatus.unhealthy;
+
+        OORTask oorTask = new OORTask(rotationStatus);
+        oorTask.execute(null, null);
 
         Thread.sleep(10000);
         info = bundle.getServiceDiscoveryClient().getNode();
         assertFalse(info.isPresent());
+
+        BIRTask birTask = new BIRTask(rotationStatus);
+        birTask.execute(null, null);
+        Thread.sleep(10000);
+
+        info = bundle.getServiceDiscoveryClient().getNode();
+        assertTrue(info.isPresent());
+
     }
 }

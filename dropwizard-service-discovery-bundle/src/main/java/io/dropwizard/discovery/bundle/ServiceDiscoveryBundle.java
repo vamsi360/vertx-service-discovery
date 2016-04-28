@@ -21,11 +21,13 @@ import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.serviceprovider.ServiceProvider;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
+import io.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.dropwizard.discovery.client.io.dropwizard.ranger.ServiceDiscoveryClient;
 import io.dropwizard.discovery.common.ShardInfo;
 import io.dropwizard.lifecycle.Managed;
@@ -56,6 +58,10 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     @Getter
     private ServiceDiscoveryClient serviceDiscoveryClient;
 
+    @Getter
+    @VisibleForTesting
+    private RotationStatus rotationStatus;
+
     protected ServiceDiscoveryBundle() {
 
     }
@@ -73,6 +79,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final String serviceName = getServiceName(configuration);
         final String hostname = getHost();
         final int port = getPort(configuration);
+        rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
+
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
                 .namespace(namespace)
@@ -103,6 +111,16 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                         }
                     }
                     return HealthcheckStatus.healthy;
+                })
+                .withHealthcheck(() -> {
+                    if (rotationStatus.status()) {
+                        log.info("Healthy");
+                        return HealthcheckStatus.healthy;
+                    }
+                    else {
+                        log.info("Unhealthy");
+                        return HealthcheckStatus.unhealthy;
+                    }
                 })
                 .buildServiceDiscovery();
 

@@ -92,6 +92,7 @@ public class ServiceDiscoveryBundleTest {
                                     .connectionRetryIntervalMillis(5000)
                                     .publishedHost("TestHost")
                                     .publishedPort(8021)
+                                    .initialRotationStatus(true)
                                     .build();
         bundle.initialize(bootstrap);
 
