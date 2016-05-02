@@ -27,6 +27,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
+import io.dropwizard.discovery.bundle.id.IdGenerator;
+import io.dropwizard.discovery.bundle.id.NodeIdManager;
 import io.dropwizard.discovery.bundle.rotationstatus.BIRTask;
 import io.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
@@ -127,12 +129,15 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                                     .objectMapper(environment.getObjectMapper())
                                     .build();
 
+
         environment.lifecycle().manage(new Managed() {
             @Override
             public void start() throws Exception {
                 curator.start();
                 serviceProvider.start();
                 serviceDiscoveryClient.start();
+                NodeIdManager nodeIdManager = new NodeIdManager(curator, serviceName);
+                IdGenerator.initialize(nodeIdManager.fixNodeId());
             }
 
             @Override
