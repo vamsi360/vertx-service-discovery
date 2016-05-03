@@ -28,9 +28,7 @@ import javax.validation.constraints.NotNull;
  * Ranger configuration.
  */
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @EqualsAndHashCode
 @ToString
 public class ServiceDiscoveryConfiguration {
@@ -60,4 +58,21 @@ public class ServiceDiscoveryConfiguration {
     private int publishedPort = Constants.DEFAULT_PORT;
 
     private boolean initialRotationStatus = true;
+
+    @Builder
+    public ServiceDiscoveryConfiguration(String namespace,
+                                         String environment,
+                                         String zookeeper,
+                                         int connectionRetryIntervalMillis,
+                                         String publishedHost,
+                                         int publishedPort,
+                                         boolean initialRotationStatus) {
+        this.namespace = namespace;
+        this.environment = environment;
+        this.zookeeper = zookeeper;
+        this.connectionRetryIntervalMillis = connectionRetryIntervalMillis;
+        this.publishedHost = publishedHost;
+        this.publishedPort = publishedPort;
+        this.initialRotationStatus = initialRotationStatus;
+    }
 }
