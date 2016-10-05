@@ -83,6 +83,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final String serviceName = getServiceName(configuration);
         final String hostname = getHost();
         final int port = getPort(configuration);
+        final long validdRegistationTime = System.currentTimeMillis() + serviceDiscoveryConfiguration.getInitialDelaySeconds() * 1000;
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
 
         curator = CuratorFrameworkFactory.builder()
@@ -108,6 +109,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withNodeData(ShardInfo.builder()
                                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                                 .build())
+                //Standard healthchecks
                 .withHealthcheck(() -> {
                     for(Healthcheck healthcheck : healthchecks) {
                         if(HealthcheckStatus.unhealthy == healthcheck.check()) {
@@ -116,7 +118,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                     }
                     return HealthcheckStatus.healthy;
                 })
+                //This allows the node to be taken offline in the cluster but still keep running
                 .withHealthcheck(() -> (rotationStatus.status())
+                            ? HealthcheckStatus.healthy
+                            : HealthcheckStatus.unhealthy)
+                //The following will return healthy only after stipulated time
+                //This will give other bundles eetc to startup properly
+                //By the time the node joins the cluster
+                .withHealthcheck(() -> System.currentTimeMillis() > validdRegistationTime
                             ? HealthcheckStatus.healthy
                             : HealthcheckStatus.unhealthy)
                 .buildServiceDiscovery();

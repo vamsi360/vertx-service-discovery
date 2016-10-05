@@ -57,6 +57,10 @@ public class ServiceDiscoveryConfiguration {
     @Max(65535)
     private int publishedPort = Constants.DEFAULT_PORT;
 
+    @Min(0)
+    @Max(120)
+    private long initialDelaySeconds;
+
     private boolean initialRotationStatus = true;
 
     @Builder
@@ -66,7 +70,8 @@ public class ServiceDiscoveryConfiguration {
                                          int connectionRetryIntervalMillis,
                                          String publishedHost,
                                          int publishedPort,
-                                         boolean initialRotationStatus) {
+                                         boolean initialRotationStatus,
+                                         long initialDelaySeconds) {
         this.namespace = namespace;
         this.environment = environment;
         this.zookeeper = zookeeper;
@@ -74,5 +79,6 @@ public class ServiceDiscoveryConfiguration {
         this.publishedHost = publishedHost;
         this.publishedPort = publishedPort;
         this.initialRotationStatus = initialRotationStatus;
+        this.initialDelaySeconds = initialDelaySeconds;
     }
 }
