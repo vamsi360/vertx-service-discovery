@@ -20,7 +20,9 @@ package io.dropwizard.discovery.bundle;
 import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
+import com.flipkart.ranger.healthservice.monitor.IsolatedHealthMonitor;
 import com.flipkart.ranger.serviceprovider.ServiceProvider;
+import com.flipkart.ranger.serviceprovider.ServiceProviderBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -92,7 +94,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .retryPolicy(new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()))
                 .build();
 
-        serviceProvider = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
+        ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
@@ -111,14 +113,15 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                                 .build())
                 //Standard healthchecks
                 .withHealthcheck(() -> {
-                    for(Healthcheck healthcheck : healthchecks) {
-                        if(HealthcheckStatus.unhealthy == healthcheck.check()) {
+                    for (Healthcheck healthcheck : healthchecks) {
+                        if (HealthcheckStatus.unhealthy == healthcheck.check()) {
                             return HealthcheckStatus.unhealthy;
                         }
                     }
                     return HealthcheckStatus.healthy;
                 })
                 //This allows the node to be taken offline in the cluster but still keep running
+
                 .withHealthcheck(() -> (rotationStatus.status())
                             ? HealthcheckStatus.healthy
                             : HealthcheckStatus.unhealthy)
@@ -127,9 +130,13 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 //By the time the node joins the cluster
                 .withHealthcheck(() -> System.currentTimeMillis() > validdRegistationTime
                             ? HealthcheckStatus.healthy
-                            : HealthcheckStatus.unhealthy)
-                .buildServiceDiscovery();
+                            : HealthcheckStatus.unhealthy);
 
+        List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
+        if (healthMonitors != null && !healthMonitors.isEmpty()) {
+            healthMonitors.forEach(serviceProviderBuilder::withIsolatedHealthMonitor);
+        }
+        serviceProvider = serviceProviderBuilder.buildServiceDiscovery();
         serviceDiscoveryClient = ServiceDiscoveryClient.fromCurator()
                                     .curator(curator)
                                     .namespace(namespace)
@@ -165,6 +172,10 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     protected abstract ServiceDiscoveryConfiguration getRangerConfiguration(T configuration);
 
     protected abstract String getServiceName(T configuration);
+
+    protected List<IsolatedHealthMonitor> getHealthMonitors() {
+        return Lists.newArrayList();
+    }
 
     protected int getPort(T configuration) {
         Preconditions.checkArgument(
