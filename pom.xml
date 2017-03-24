@@ -7,7 +7,7 @@
     <groupId>io.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.6</version>
+    <version>1.0.6-1</version>
     <modules>
         <module>dropwizard-service-discovery-common</module>
         <module>dropwizard-service-discovery-client</module>
@@ -60,7 +60,7 @@
         <lombok.version>1.16.10</lombok.version>
         <guava.version>19.0</guava.version>
         <junit.version>4.12</junit.version>
-        <ranger.version>0.3.0-SNAPSHOT</ranger.version>
+        <ranger.version>0.3.0</ranger.version>
         <curator.version>2.9.0</curator.version>
     </properties>
 
