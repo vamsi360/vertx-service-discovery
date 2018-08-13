@@ -24,6 +24,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.security.SecureRandom;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -45,13 +46,22 @@ public class IdGenerator {
     private static int nodeId;
     private static DateTimeFormatter formatter = DateTimeFormat.forPattern("yyMMddHHmmssSSS");
     private static final CollisionChecker collisionChecker = new CollisionChecker();
+    private static List<IdValidationConstraint> globalConstraints = Collections.emptyList();
 
     public static void initialize(int node) {
         nodeId = node;
     }
 
+    public static void initialize(int node, List<IdValidationConstraint> globalConstraints) {
+        nodeId = node;
+        IdGenerator.globalConstraints = globalConstraints != null
+                ? globalConstraints
+                : Collections.emptyList();
+    }
+
     /**
      * Generate id with given prefix
+     *
      * @param prefix String prefix with will be used to blindly merge
      * @return
      */
@@ -71,7 +81,8 @@ public class IdGenerator {
      * Generate id that mathces all passed constraints.
      * NOTE: There are performance implications for this.
      * The evaluation of constraints will take it's toll on id generation rates. Tun rests to check speed.
-     * @param prefix String prefix
+     *
+     * @param prefix        String prefix
      * @param inConstraints Constraints that need to be validate.
      * @return
      */
@@ -83,7 +94,8 @@ public class IdGenerator {
      * Generate id that mathces all passed constraints.
      * NOTE: There are performance implications for this.
      * The evaluation of constraints will take it's toll on id generation rates. Tun rests to check speed.
-     * @param prefix String prefix
+     *
+     * @param prefix        String prefix
      * @param inConstraints Constraints that need to be validate.
      * @return
      */
@@ -91,7 +103,7 @@ public class IdGenerator {
         Id id;
         do {
             id = generate(prefix);
-        } while (validateId(inConstraints, id));
+        } while (!isValidId(inConstraints, id));
         return id;
     }
 
@@ -105,9 +117,11 @@ public class IdGenerator {
         return new IdInfo(randomGen, time);
     }
 
-    private static boolean validateId(List<IdValidationConstraint> inConstraints, Id id) {
-        return null != inConstraints
-                && !inConstraints.stream()
-                .allMatch(constraint -> constraint.isValid(id));
+    private static boolean isValidId(List<IdValidationConstraint> inConstraints, Id id) {
+        return globalConstraints.stream()
+                .allMatch(constraint -> constraint.isValid(id))
+                && (null == inConstraints
+                || inConstraints.stream()
+                .allMatch(constraint -> constraint.isValid(id)));
     }
 }

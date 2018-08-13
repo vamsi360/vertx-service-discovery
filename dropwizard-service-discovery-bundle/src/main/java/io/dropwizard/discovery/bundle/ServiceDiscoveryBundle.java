@@ -31,6 +31,7 @@ import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.discovery.bundle.id.IdGenerator;
 import io.dropwizard.discovery.bundle.id.NodeIdManager;
+import io.dropwizard.discovery.bundle.id.constraints.IdValidationConstraint;
 import io.dropwizard.discovery.bundle.rotationstatus.BIRTask;
 import io.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
@@ -47,6 +48,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryForever;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -58,6 +60,9 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private List<Healthcheck> healthchecks = Lists.newArrayList();
     private ServiceProvider<ShardInfo> serviceProvider;
+
+    private final List<IdValidationConstraint> globalIdConstraints;
+
     @Getter
     private CuratorFramework curator;
 
@@ -69,7 +74,13 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private RotationStatus rotationStatus;
 
     protected ServiceDiscoveryBundle() {
+        globalIdConstraints = Collections.emptyList();
+    }
 
+    protected ServiceDiscoveryBundle(List<IdValidationConstraint> globalIdConstraints) {
+        this.globalIdConstraints = globalIdConstraints != null
+                ? globalIdConstraints
+                : Collections.emptyList();
     }
 
     @Override
@@ -153,7 +164,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 serviceProvider.start();
                 serviceDiscoveryClient.start();
                 NodeIdManager nodeIdManager = new NodeIdManager(curator, serviceName);
-                IdGenerator.initialize(nodeIdManager.fixNodeId());
+                IdGenerator.initialize(nodeIdManager.fixNodeId(), globalIdConstraints);
             }
 
             @Override
