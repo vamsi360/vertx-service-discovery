@@ -32,6 +32,8 @@ public class JavaHashCodeBasedKeyPartitioner implements KeyPartitioner {
 
     @Override
     public int partition(Id id) {
-        return id.getId().hashCode() % maxPartitions;
+        int hashCode = id.getId().hashCode();
+        hashCode *= hashCode < 0 ? -1 : 1;
+        return hashCode % maxPartitions;
     }
 }
