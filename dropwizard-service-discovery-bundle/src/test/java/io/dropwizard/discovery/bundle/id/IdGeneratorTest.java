@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -65,7 +66,7 @@ public class IdGeneratorTest {
         @Override
         public Long call() throws Exception {
             while (!stop) {
-                Id id = IdGenerator.generateWithConstraints("X", constraint);
+                Id id = IdGenerator.generateWithConstraints("X", Collections.singletonList(constraint));
                 count++;
             };
             return count;

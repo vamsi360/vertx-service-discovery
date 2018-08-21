@@ -164,7 +164,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 serviceProvider.start();
                 serviceDiscoveryClient.start();
                 NodeIdManager nodeIdManager = new NodeIdManager(curator, serviceName);
-                IdGenerator.initialize(nodeIdManager.fixNodeId(), globalIdConstraints);
+                IdGenerator.initialize(nodeIdManager.fixNodeId(), globalIdConstraints, Collections.emptyMap());
             }
 
             @Override
