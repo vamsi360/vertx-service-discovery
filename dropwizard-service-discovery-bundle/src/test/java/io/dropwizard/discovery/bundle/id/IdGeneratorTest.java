@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -66,7 +67,8 @@ public class IdGeneratorTest {
         @Override
         public Long call() throws Exception {
             while (!stop) {
-                Id id = IdGenerator.generateWithConstraints("X", Collections.singletonList(constraint));
+                Optional<Id> id = IdGenerator.generateWithConstraints("X", Collections.singletonList(constraint));
+                Assert.assertTrue(id.isPresent());
                 count++;
             };
             return count;

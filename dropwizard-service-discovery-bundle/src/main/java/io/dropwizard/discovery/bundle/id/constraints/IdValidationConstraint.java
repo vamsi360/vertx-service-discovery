@@ -25,4 +25,8 @@ import io.dropwizard.discovery.bundle.id.Id;
 public interface IdValidationConstraint {
 
     boolean isValid(Id id);
+
+    default boolean failFast() {
+        return false;
+    }
 }

@@ -20,6 +20,7 @@ package io.dropwizard.discovery.bundle.id;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.dropwizard.discovery.bundle.id.constraints.IdValidationConstraint;
+import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -30,7 +31,14 @@ import java.util.*;
 /**
  * Id generation
  */
+@Slf4j
 public class IdGenerator {
+
+    private enum IdValidationState {
+        VALID,
+        INVALID_RETRYABLE,
+        INVALID_NON_RETRYABLE
+    }
 
     private static final class IdInfo {
         int exponent;
@@ -113,7 +121,7 @@ public class IdGenerator {
      * @param domain Domain for constraint selection
      * @return
      */
-    public static Id generateWithConstraints(String prefix, String domain) {
+    public static Optional<Id> generateWithConstraints(String prefix, String domain) {
         return generateWithConstraints(prefix, domainSpecificConstraints.getOrDefault(domain, Collections.emptyList()), true);
     }
 
@@ -127,7 +135,7 @@ public class IdGenerator {
      * @param skipGlobal Skip global constrains and use only passed ones
      * @return
      */
-    public static Id generateWithConstraints(String prefix, String domain, boolean skipGlobal) {
+    public static Optional<Id> generateWithConstraints(String prefix, String domain, boolean skipGlobal) {
         return generateWithConstraints(prefix, domainSpecificConstraints.getOrDefault(domain, Collections.emptyList()), skipGlobal);
     }
 
@@ -140,7 +148,7 @@ public class IdGenerator {
      * @param inConstraints Constraints that need to be validate.
      * @return
      */
-    public static Id generateWithConstraints(String prefix, final List<IdValidationConstraint> inConstraints) {
+    public static Optional<Id> generateWithConstraints(String prefix, final List<IdValidationConstraint> inConstraints) {
         return generateWithConstraints(prefix, inConstraints, false);
     }
 
@@ -154,12 +162,26 @@ public class IdGenerator {
      * @param skipGlobal Skip global constrains and use only passed ones
      * @return
      */
-    public static Id generateWithConstraints(String prefix, final List<IdValidationConstraint> inConstraints, boolean skipGlobal) {
+    public static Optional<Id> generateWithConstraints(String prefix, final List<IdValidationConstraint> inConstraints, boolean skipGlobal) {
         Id id;
         do {
             id = generate(prefix);
-        } while (!isValidId(inConstraints, id, skipGlobal));
-        return id;
+            try {
+                final IdValidationState validationState = validateId(inConstraints, id, skipGlobal);
+                switch (validationState) {
+
+                    case VALID:
+                        return Optional.of(id);
+                    case INVALID_RETRYABLE:
+                        break;
+                    case INVALID_NON_RETRYABLE:
+                        return Optional.empty();
+                }
+            } catch (Throwable t) {
+                log.error("Could not generate id with prefix: " + prefix, t);
+                return Optional.empty();
+            }
+        } while (true);
     }
 
     private synchronized static IdInfo random() {
@@ -172,12 +194,33 @@ public class IdGenerator {
         return new IdInfo(randomGen, time);
     }
 
-    private static boolean isValidId(List<IdValidationConstraint> inConstraints, Id id, boolean skipGlobal) {
-        return (skipGlobal
-                || globalConstraints.stream()
-                .allMatch(constraint -> constraint.isValid(id)))
-                && (null == inConstraints
-                || inConstraints.stream()
-                .allMatch(constraint -> constraint.isValid(id)));
+    private static IdValidationState validateId(List<IdValidationConstraint> inConstraints, Id id, boolean skipGlobal) {
+        //First evaluate global constranints
+        final IdValidationConstraint failedGlobalConstraint
+                = skipGlobal || null == globalConstraints
+                ? null
+                : globalConstraints.stream()
+                        .filter(constraint -> !constraint.isValid(id))
+                        .findFirst()
+                        .orElse(null);
+        if(null != failedGlobalConstraint) {
+            return failedGlobalConstraint.failFast()
+                    ? IdValidationState.INVALID_NON_RETRYABLE
+                    : IdValidationState.INVALID_RETRYABLE;
+        }
+        //Evaluate local + domain constraints
+        final IdValidationConstraint failedLocalConstraint
+                = null == inConstraints
+                ? null
+                : inConstraints.stream()
+                .filter(constraint -> !constraint.isValid(id))
+                .findFirst()
+                .orElse(null);
+        if(null != failedLocalConstraint) {
+            return failedLocalConstraint.failFast()
+                    ? IdValidationState.INVALID_NON_RETRYABLE
+                    : IdValidationState.INVALID_RETRYABLE;
+        }
+        return IdValidationState.VALID;
     }
 }
