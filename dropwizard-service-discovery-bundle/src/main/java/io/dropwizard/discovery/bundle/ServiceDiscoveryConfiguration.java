@@ -27,8 +27,8 @@ import javax.validation.constraints.NotNull;
 /**
  * Ranger configuration.
  */
-@Data
 @NoArgsConstructor
+@Data
 @EqualsAndHashCode
 @ToString
 public class ServiceDiscoveryConfiguration {
