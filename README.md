@@ -110,7 +110,7 @@ Use GET /instances to see all instances that have been registered to your servic
 
 ## How to use the client
 The client needs to be created and started. Once started it should never be stopped before the using service
-itself dies or no queries will ever be made to ZK. Creation of the the client is expensive.
+itself dies or no queries will ever be made to ZK. Creation of the client is expensive.
 
 ```
 ServiceDiscoveryClient client = ServiceDiscoveryClient.fromConnectionString()
