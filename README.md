@@ -16,7 +16,7 @@ Provides service discovery to dropwizard services. It uses [Ranger](https://gith
 <dependency>
     <groupId>io.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery-bundle</artifactId>
-    <version>1.2.2</version>
+    <version>1.3.7-1-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -110,7 +110,7 @@ Use GET /instances to see all instances that have been registered to your servic
 
 ## How to use the client
 The client needs to be created and started. Once started it should never be stopped before the using service
-itself dies or no queries will ever be made to ZK. Creation of the the client is expensive.
+itself dies or no queries will ever be made to ZK. Creation of the client is expensive.
 
 ```
 ServiceDiscoveryClient client = ServiceDiscoveryClient.fromConnectionString()

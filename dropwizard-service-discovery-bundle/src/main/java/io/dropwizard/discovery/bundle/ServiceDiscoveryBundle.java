@@ -17,6 +17,7 @@
 
 package io.dropwizard.discovery.bundle;
 
+import com.codahale.metrics.health.HealthCheck;
 import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
@@ -141,7 +142,15 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 //By the time the node joins the cluster
                 .withHealthcheck(() -> System.currentTimeMillis() > validdRegistationTime
                             ? HealthcheckStatus.healthy
-                            : HealthcheckStatus.unhealthy);
+                            : HealthcheckStatus.unhealthy)
+                .withHealthcheck(() -> (null != environment.healthChecks()
+                                && environment.healthChecks()
+                                .runHealthChecks()
+                                .values()
+                                .stream()
+                                .allMatch(HealthCheck.Result::isHealthy))
+                                ? HealthcheckStatus.healthy
+                                : HealthcheckStatus.unhealthy);
 
         List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {
