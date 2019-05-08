@@ -58,7 +58,7 @@ public class ServiceDiscoveryConfiguration {
     private int publishedPort = Constants.DEFAULT_PORT;
 
     @Min(0)
-    @Max(120)
+    @Max(600)
     private long initialDelaySeconds;
 
     private boolean initialRotationStatus = true;
