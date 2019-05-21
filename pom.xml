@@ -7,7 +7,7 @@
     <groupId>io.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery</artifactId>
     <packaging>pom</packaging>
-    <version>1.3.7-2</version>
+    <version>1.3.7-3</version>
     <modules>
         <module>dropwizard-service-discovery-common</module>
         <module>dropwizard-service-discovery-client</module>
@@ -60,7 +60,7 @@
         <lombok.version>1.16.22</lombok.version>
         <guava.version>26.0-jre</guava.version>
         <junit.version>4.12</junit.version>
-        <ranger.version>0.4.0</ranger.version>
+        <ranger.version>0.4.1</ranger.version>
         <curator.version>4.0.1</curator.version>
     </properties>
 
@@ -181,6 +181,30 @@
                     <execution>
                         <goals>
                             <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
                         </goals>
                     </execution>
                 </executions>
