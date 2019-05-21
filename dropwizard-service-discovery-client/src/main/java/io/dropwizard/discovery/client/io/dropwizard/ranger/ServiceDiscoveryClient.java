@@ -41,16 +41,35 @@ public class ServiceDiscoveryClient {
     private SimpleShardedServiceFinder<ShardInfo> serviceFinder;
 
     @Builder(builderMethodName = "fromConnectionString", builderClassName = "FromConnectionStringBuilder")
-    ServiceDiscoveryClient(String namespace, String serviceName, String environment,
-                           ObjectMapper objectMapper, String connectionString) throws Exception {
-        this(namespace, serviceName, environment, objectMapper,
-                CuratorFrameworkFactory.newClient(connectionString, new RetryForever(5000)));
+    ServiceDiscoveryClient(
+            String namespace,
+            String serviceName,
+            String environment,
+            ObjectMapper objectMapper,
+            String connectionString,
+            int refreshTimeMs,
+            boolean disableWatchers) throws Exception {
+        this(namespace,
+             serviceName,
+             environment,
+             objectMapper,
+             CuratorFrameworkFactory.newClient(connectionString, new RetryForever(5000)),
+             refreshTimeMs,
+             disableWatchers);
     }
 
     @Builder(builderMethodName = "fromCurator", builderClassName = "FromCuratorBuilder")
-    ServiceDiscoveryClient(String namespace, String serviceName, String environment,
-                           ObjectMapper objectMapper, CuratorFramework curator) throws Exception {
-        this.criteria = ShardInfo.builder().environment(environment).build();
+    ServiceDiscoveryClient(
+            String namespace,
+            String serviceName,
+            String environment,
+            ObjectMapper objectMapper,
+            CuratorFramework curator,
+            int refreshTimeMs,
+            boolean disableWatchers) throws Exception {
+        this.criteria = ShardInfo.builder()
+                .environment(environment)
+                .build();
         this.serviceFinder = ServiceFinderBuilders.<ShardInfo>shardedFinderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
@@ -58,13 +77,16 @@ public class ServiceDiscoveryClient {
                 .withDeserializer(data -> {
                     try {
                         return objectMapper.readValue(data,
-                                new TypeReference<ServiceNode<ShardInfo>>() {
-                                });
-                    } catch (Exception e) {
+                                                      new TypeReference<ServiceNode<ShardInfo>>() {
+                                                      });
+                    }
+                    catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;
                 })
+                .withNodeRefreshIntervalMs(refreshTimeMs)
+                .withDisableWatchers(disableWatchers)
                 .build();
     }
 

@@ -100,6 +100,9 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final long validdRegistationTime = System.currentTimeMillis() + serviceDiscoveryConfiguration.getInitialDelaySeconds() * 1000;
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
 
+        int refreshTime = serviceDiscoveryConfiguration.getRefreshTimeMs() == 0
+                ? 1000
+                : serviceDiscoveryConfiguration.getRefreshTimeMs();
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
                 .namespace(namespace)
@@ -113,7 +116,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withSerializer(data -> {
                     try {
                         return objectMapper.writeValueAsBytes(data);
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;
@@ -121,8 +125,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withHostname(hostname)
                 .withPort(port)
                 .withNodeData(ShardInfo.builder()
-                                .environment(serviceDiscoveryConfiguration.getEnvironment())
-                                .build())
+                                      .environment(serviceDiscoveryConfiguration.getEnvironment())
+                                      .build())
                 //Standard healthchecks
                 .withHealthcheck(() -> {
                     for (Healthcheck healthcheck : healthchecks) {
@@ -135,22 +139,23 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 //This allows the node to be taken offline in the cluster but still keep running
 
                 .withHealthcheck(() -> (rotationStatus.status())
-                            ? HealthcheckStatus.healthy
-                            : HealthcheckStatus.unhealthy)
+                        ? HealthcheckStatus.healthy
+                        : HealthcheckStatus.unhealthy)
                 //The following will return healthy only after stipulated time
                 //This will give other bundles eetc to startup properly
                 //By the time the node joins the cluster
                 .withHealthcheck(() -> System.currentTimeMillis() > validdRegistationTime
-                            ? HealthcheckStatus.healthy
-                            : HealthcheckStatus.unhealthy)
+                        ? HealthcheckStatus.healthy
+                        : HealthcheckStatus.unhealthy)
                 .withHealthcheck(() -> (null != environment.healthChecks()
-                                && environment.healthChecks()
-                                .runHealthChecks()
-                                .values()
-                                .stream()
-                                .allMatch(HealthCheck.Result::isHealthy))
-                                ? HealthcheckStatus.healthy
-                                : HealthcheckStatus.unhealthy);
+                        && environment.healthChecks()
+                        .runHealthChecks()
+                        .values()
+                        .stream()
+                        .allMatch(HealthCheck.Result::isHealthy))
+                        ? HealthcheckStatus.healthy
+                        : HealthcheckStatus.unhealthy)
+                .withHealthUpdateIntervalMs(refreshTime);
 
         List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {
@@ -158,35 +163,40 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         }
         serviceProvider = serviceProviderBuilder.buildServiceDiscovery();
         serviceDiscoveryClient = ServiceDiscoveryClient.fromCurator()
-                                    .curator(curator)
-                                    .namespace(namespace)
-                                    .serviceName(serviceName)
-                                    .environment(serviceDiscoveryConfiguration.getEnvironment())
-                                    .objectMapper(environment.getObjectMapper())
-                                    .build();
+                .curator(curator)
+                .namespace(namespace)
+                .serviceName(serviceName)
+                .environment(serviceDiscoveryConfiguration.getEnvironment())
+                .objectMapper(environment.getObjectMapper())
+                .refreshTimeMs(refreshTime)
+                .disableWatchers(serviceDiscoveryConfiguration.isDisableWatchers())
+                .build();
 
+        environment.lifecycle()
+                .manage(new Managed() {
+                    @Override
+                    public void start() throws Exception {
+                        curator.start();
+                        serviceProvider.start();
+                        serviceDiscoveryClient.start();
+                        NodeIdManager nodeIdManager = new NodeIdManager(curator, serviceName);
+                        IdGenerator.initialize(nodeIdManager.fixNodeId(), globalIdConstraints, Collections.emptyMap());
+                    }
 
-        environment.lifecycle().manage(new Managed() {
-            @Override
-            public void start() throws Exception {
-                curator.start();
-                serviceProvider.start();
-                serviceDiscoveryClient.start();
-                NodeIdManager nodeIdManager = new NodeIdManager(curator, serviceName);
-                IdGenerator.initialize(nodeIdManager.fixNodeId(), globalIdConstraints, Collections.emptyMap());
-            }
+                    @Override
+                    public void stop() throws Exception {
+                        serviceDiscoveryClient.stop();
+                        serviceProvider.stop();
+                        curator.close();
+                    }
+                });
 
-            @Override
-            public void stop() throws Exception {
-                serviceDiscoveryClient.stop();
-                serviceProvider.stop();
-                curator.close();
-            }
-        });
-
-        environment.jersey().register(new InfoResource(serviceDiscoveryClient));
-        environment.admin().addTask(new OORTask(rotationStatus));
-        environment.admin().addTask(new BIRTask(rotationStatus));
+        environment.jersey()
+                .register(new InfoResource(serviceDiscoveryClient));
+        environment.admin()
+                .addTask(new OORTask(rotationStatus));
+        environment.admin()
+                .addTask(new BIRTask(rotationStatus));
     }
 
     protected abstract ServiceDiscoveryConfiguration getRangerConfiguration(T configuration);
@@ -200,17 +210,18 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     protected int getPort(T configuration) {
         Preconditions.checkArgument(
                 Constants.DEFAULT_PORT != serviceDiscoveryConfiguration.getPublishedPort()
-                && 0 != serviceDiscoveryConfiguration.getPublishedPort(),
+                        && 0 != serviceDiscoveryConfiguration.getPublishedPort(),
                 "Looks like publishedPost has not been set and getPort() has not been overridden. This is wrong. \n" +
-                    "Either set publishedPort in config or override getPort() to return the port on which the service is running");
+                        "Either set publishedPort in config or override getPort() to return the port on which the service is running");
         return serviceDiscoveryConfiguration.getPublishedPort();
     }
 
     protected String getHost() throws Exception {
         final String host = serviceDiscoveryConfiguration.getPublishedHost();
 
-        if(Strings.isNullOrEmpty(host) || host.equals(Constants.DEFAULT_HOST)) {
-            return InetAddress.getLocalHost().getCanonicalHostName();
+        if (Strings.isNullOrEmpty(host) || host.equals(Constants.DEFAULT_HOST)) {
+            return InetAddress.getLocalHost()
+                    .getCanonicalHostName();
         }
         return host;
     }

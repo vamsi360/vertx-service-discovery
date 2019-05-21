@@ -57,6 +57,10 @@ public class ServiceDiscoveryConfiguration {
     @Max(65535)
     private int publishedPort = Constants.DEFAULT_PORT;
 
+    private int refreshTimeMs;
+
+    private boolean disableWatchers;
+
     @Min(0)
     @Max(600)
     private long initialDelaySeconds;
@@ -71,6 +75,8 @@ public class ServiceDiscoveryConfiguration {
                                          String publishedHost,
                                          int publishedPort,
                                          boolean initialRotationStatus,
+                                         int refreshTimeMs,
+                                         boolean disableWatchers,
                                          long initialDelaySeconds) {
         this.namespace = namespace;
         this.environment = environment;
@@ -79,6 +85,8 @@ public class ServiceDiscoveryConfiguration {
         this.publishedHost = publishedHost;
         this.publishedPort = publishedPort;
         this.initialRotationStatus = initialRotationStatus;
+        this.refreshTimeMs = refreshTimeMs;
+        this.disableWatchers = disableWatchers;
         this.initialDelaySeconds = initialDelaySeconds;
     }
 }
