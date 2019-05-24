@@ -128,6 +128,7 @@ public class ServiceDiscoveryBundleRotationTest {
     public void testDiscovery() throws Exception {
         Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
         System.out.println(environment.getObjectMapper().writeValueAsString(info));
+        Thread.sleep(5000);
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
         assertEquals("TestHost", info.get().getHost());

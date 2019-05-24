@@ -17,9 +17,14 @@
 
 package io.dropwizard.discovery.bundle.id;
 
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.dropwizard.discovery.bundle.id.constraints.IdValidationConstraint;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -27,6 +32,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Id generation
@@ -56,6 +62,12 @@ public class IdGenerator {
     private static final CollisionChecker collisionChecker = new CollisionChecker();
     private static List<IdValidationConstraint> globalConstraints = Collections.emptyList();
     private static Map<String, List<IdValidationConstraint>> domainSpecificConstraints = new HashMap<>();
+    private static final Retryer<GenerationResult> retrier = RetryerBuilder.<GenerationResult>newBuilder()
+            .withStopStrategy(StopStrategies.stopAfterAttempt(512))
+            .retryIfException()
+            .retryIfResult(Objects::isNull)
+            .retryIfResult(result -> result.getState().equals(IdValidationState.INVALID_RETRYABLE))
+            .build();
 
     public static void initialize(int node) {
         nodeId = node;
@@ -152,6 +164,11 @@ public class IdGenerator {
         return generateWithConstraints(prefix, inConstraints, false);
     }
 
+    @Data
+    private static class GenerationResult {
+        private final Id id;
+        private final IdValidationState state;
+    }
     /**
      * Generate id that mathces all passed constraints.
      * NOTE: There are performance implications for this.
@@ -163,25 +180,20 @@ public class IdGenerator {
      * @return
      */
     public static Optional<Id> generateWithConstraints(String prefix, final List<IdValidationConstraint> inConstraints, boolean skipGlobal) {
-        Id id;
-        do {
-            id = generate(prefix);
-            try {
-                final IdValidationState validationState = validateId(inConstraints, id, skipGlobal);
-                switch (validationState) {
-
-                    case VALID:
-                        return Optional.of(id);
-                    case INVALID_RETRYABLE:
-                        break;
-                    case INVALID_NON_RETRYABLE:
-                        return Optional.empty();
-                }
-            } catch (Throwable t) {
-                log.error("Could not generate id with prefix: " + prefix, t);
-                return Optional.empty();
-            }
-        } while (true);
+        try {
+            final GenerationResult generationResult = retrier.call(() -> {
+                Id id = generate(prefix);
+                return new GenerationResult(id, validateId(inConstraints, id, skipGlobal));
+            });
+            return Optional.ofNullable(generationResult.getId());
+        }
+        catch (ExecutionException e) {
+            log.error("Error occurred while generating id with prefix " + prefix, e);
+        }
+        catch (RetryException e) {
+            log.error("Failed to generate id with prefix " + prefix + " after max attempts (512)", e);
+        }
+        return Optional.empty();
     }
 
     private synchronized static IdInfo random() {
@@ -195,7 +207,7 @@ public class IdGenerator {
     }
 
     private static IdValidationState validateId(List<IdValidationConstraint> inConstraints, Id id, boolean skipGlobal) {
-        //First evaluate global constranints
+        //First evaluate global constraints
         final IdValidationConstraint failedGlobalConstraint
                 = skipGlobal || null == globalConstraints
                 ? null

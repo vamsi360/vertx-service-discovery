@@ -153,4 +153,4 @@ client.stop();
 Apache 2
 
 ## Version
-0.9.2
+1.3.7-4

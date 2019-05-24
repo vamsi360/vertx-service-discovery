@@ -127,4 +127,13 @@ public class IdGeneratorTest {
         Assert.assertTrue(totalCount > 0);
 
     }
+
+    @Test
+    public void testConstraintFailure() {
+        IdGenerator.initialize(23);
+        Assert.assertFalse(IdGenerator.generateWithConstraints(
+                "TST",
+                ImmutableList.of(id -> false),
+                false).isPresent());
+    }
 }
