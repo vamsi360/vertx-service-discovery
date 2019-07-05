@@ -196,7 +196,7 @@ public class IdGenerator {
         return Optional.empty();
     }
 
-    private synchronized static IdInfo random() {
+    private static synchronized IdInfo random() {
         int randomGen;
         long time;
         do {

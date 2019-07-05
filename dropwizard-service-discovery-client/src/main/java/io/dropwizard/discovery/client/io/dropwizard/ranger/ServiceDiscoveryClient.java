@@ -66,7 +66,7 @@ public class ServiceDiscoveryClient {
             ObjectMapper objectMapper,
             CuratorFramework curator,
             int refreshTimeMs,
-            boolean disableWatchers) throws Exception {
+            boolean disableWatchers) {
         this.criteria = ShardInfo.builder()
                 .environment(environment)
                 .build();

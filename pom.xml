@@ -7,7 +7,7 @@
     <groupId>io.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery</artifactId>
     <packaging>pom</packaging>
-    <version>1.3.7-4</version>
+    <version>1.3.12-1</version>
     <modules>
         <module>dropwizard-service-discovery-common</module>
         <module>dropwizard-service-discovery-client</module>
@@ -56,12 +56,12 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <dropwizard.version>1.3.7</dropwizard.version>
+        <dropwizard.version>1.3.12</dropwizard.version>
         <lombok.version>1.18.8</lombok.version>
-        <guava.version>26.0-jre</guava.version>
+        <guava.version>28.0-jre</guava.version>
         <junit.version>4.12</junit.version>
         <ranger.version>0.5</ranger.version>
-        <curator.version>4.0.1</curator.version>
+        <curator.version>4.2.0</curator.version>
     </properties>
 
     <dependencyManagement>
@@ -163,18 +163,6 @@
                         <totalLineRate>70</totalLineRate>
                         <packageLineRate>70</packageLineRate>
                         <packageBranchRate>70</packageBranchRate>
-                        <!--<regexes>
-                            <regex>
-                                <pattern>com.example.reallyimportant.*</pattern>
-                                <branchRate>90</branchRate>
-                                <lineRate>80</lineRate>
-                            </regex>
-                            <regex>
-                                <pattern>com.example.boringcode.*</pattern>
-                                <branchRate>40</branchRate>
-                                <lineRate>30</lineRate>
-                            </regex>
-                        </regexes>-->
                     </check>
                 </configuration>
                 <executions>

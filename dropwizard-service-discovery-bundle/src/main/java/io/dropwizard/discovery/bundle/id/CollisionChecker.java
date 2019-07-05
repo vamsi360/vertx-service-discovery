@@ -30,6 +30,7 @@ public class CollisionChecker {
     private long currentInstant = 0;
 
     public CollisionChecker() {
+        //Nothing to do here
     }
 
     public boolean check(long time, int location) {

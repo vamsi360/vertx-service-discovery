@@ -68,7 +68,7 @@ public class ServiceDiscoveryConfiguration {
     private boolean initialRotationStatus = true;
 
     @Builder
-    public ServiceDiscoveryConfiguration(String namespace,
+    private ServiceDiscoveryConfiguration(String namespace,
                                          String environment,
                                          String zookeeper,
                                          int connectionRetryIntervalMillis,

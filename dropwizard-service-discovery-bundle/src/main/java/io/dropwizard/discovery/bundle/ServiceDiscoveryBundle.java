@@ -49,6 +49,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryForever;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 
@@ -216,7 +217,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         return serviceDiscoveryConfiguration.getPublishedPort();
     }
 
-    protected String getHost() throws Exception {
+    protected String getHost() throws UnknownHostException {
         final String host = serviceDiscoveryConfiguration.getPublishedHost();
 
         if (Strings.isNullOrEmpty(host) || host.equals(Constants.DEFAULT_HOST)) {
