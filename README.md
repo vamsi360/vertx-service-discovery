@@ -2,30 +2,21 @@
 
 Provides service discovery to dropwizard services. It uses [Ranger](https://github.com/flipkart-incubator/ranger) for service discovery.
 
-## Repository
-
-```
-<repository>
-    <id>clojars</id>
-    <name>Clojars repository</name>
-    <url>https://clojars.org/repo</url>
-</repository>
-```
 ## Dependency for bundle
 ```
 <dependency>
-    <groupId>io.dropwizard.discovery</groupId>
+    <groupId>io.appform.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery-bundle</artifactId>
-    <version>1.3.12-1</version>
+    <version>1.3.12-2</version>
 </dependency>
 ```
 
 ## Dependency for client
 ```
 <dependency>
-    <groupId>io.dropwizard.discovery</groupId>
+    <groupId>io.appform.dropwizard.discovery</groupId>
     <artifactId>dropwizard-service-discovery-client</artifactId>
-    <version>1.3.7-4</version>
+    <version>1.3.12-2</version>
 </dependency>
 ```
 
@@ -151,3 +142,6 @@ client.stop();
 
 ## License
 Apache 2
+
+# NOTE
+Package and group id has changed from `io.dropwizard.discovery` to `io.appfrom.dropwizard.discovery` from 1.3.12-2.
