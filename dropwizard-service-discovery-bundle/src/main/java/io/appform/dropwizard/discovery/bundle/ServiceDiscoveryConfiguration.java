@@ -17,6 +17,7 @@
 
 package io.appform.dropwizard.discovery.bundle;
 
+import com.google.common.base.Strings;
 import lombok.*;
 import org.hibernate.validator.constraints.NotEmpty;
 
@@ -27,14 +28,14 @@ import javax.validation.constraints.NotNull;
 /**
  * Ranger configuration.
  */
-@NoArgsConstructor
 @Data
 @EqualsAndHashCode
 @ToString
+@NoArgsConstructor
 public class ServiceDiscoveryConfiguration {
     @NotNull
     @NotEmpty
-    private String namespace = "default";
+    private String namespace = Constants.DEFAULT_NAMESPACE;
 
     @NotNull
     @NotEmpty
@@ -46,7 +47,7 @@ public class ServiceDiscoveryConfiguration {
 
     @Min(1000)
     @Max(60000)
-    private int connectionRetryIntervalMillis = 5000;
+    private int connectionRetryIntervalMillis = Constants.DEFAULT_RETRY_CONN_INTERVAL;
 
     @NotNull
     @NotEmpty
@@ -67,26 +68,41 @@ public class ServiceDiscoveryConfiguration {
 
     private boolean initialRotationStatus = true;
 
+    private int dropwizardCheckInterval = Constants.DEFAULT_DW_CHECK_INTERVAl;
+
     @Builder
-    private ServiceDiscoveryConfiguration(String namespace,
-                                         String environment,
-                                         String zookeeper,
-                                         int connectionRetryIntervalMillis,
-                                         String publishedHost,
-                                         int publishedPort,
-                                         boolean initialRotationStatus,
-                                         int refreshTimeMs,
-                                         boolean disableWatchers,
-                                         long initialDelaySeconds) {
-        this.namespace = namespace;
+    public ServiceDiscoveryConfiguration(
+            String namespace,
+            String environment,
+            String zookeeper,
+            int connectionRetryIntervalMillis,
+            String publishedHost,
+            int publishedPort,
+            int refreshTimeMs,
+            boolean disableWatchers,
+            long initialDelaySeconds,
+            boolean initialRotationStatus,
+            int dropwizardCheckInterval) {
+        this.namespace = Strings.isNullOrEmpty(namespace)
+                         ? Constants.DEFAULT_NAMESPACE
+                         : namespace;
         this.environment = environment;
         this.zookeeper = zookeeper;
-        this.connectionRetryIntervalMillis = connectionRetryIntervalMillis;
-        this.publishedHost = publishedHost;
-        this.publishedPort = publishedPort;
-        this.initialRotationStatus = initialRotationStatus;
+        this.connectionRetryIntervalMillis = connectionRetryIntervalMillis == 0
+                ? Constants.DEFAULT_RETRY_CONN_INTERVAL
+                : connectionRetryIntervalMillis;
+        this.publishedHost = Strings.isNullOrEmpty(publishedHost)
+                             ? Constants.DEFAULT_HOST
+                             : publishedHost;
+        this.publishedPort = publishedPort == 0
+                            ? Constants.DEFAULT_PORT
+                            : publishedPort;
         this.refreshTimeMs = refreshTimeMs;
         this.disableWatchers = disableWatchers;
         this.initialDelaySeconds = initialDelaySeconds;
+        this.initialRotationStatus = initialRotationStatus;
+        this.dropwizardCheckInterval = dropwizardCheckInterval == 0
+                                       ? Constants.DEFAULT_DW_CHECK_INTERVAl
+                                       : dropwizardCheckInterval;
     }
 }
