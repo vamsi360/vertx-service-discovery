@@ -35,6 +35,13 @@
         </license>
     </licenses>
 
+    <repositories>
+        <repository>
+            <id>clojars</id>
+            <name>Clojars repository</name>
+            <url>https://clojars.org/repo</url>
+        </repository>
+    </repositories>
     <developers>
         <developer>
             <id>santanusinha</id>
