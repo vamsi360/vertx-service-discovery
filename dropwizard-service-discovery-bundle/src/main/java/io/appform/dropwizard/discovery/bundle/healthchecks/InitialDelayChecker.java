@@ -26,16 +26,16 @@ import com.flipkart.ranger.healthcheck.HealthcheckStatus;
  * By the time the node joins the cluster
  */
 public class InitialDelayChecker implements Healthcheck {
-    private final long validdRegistationTime;
+    private final long validRegistrationTime;
 
 
     public InitialDelayChecker(long initialDelaySeconds) {
-        validdRegistationTime = System.currentTimeMillis() + initialDelaySeconds * 1000;
+        validRegistrationTime = System.currentTimeMillis() + initialDelaySeconds * 1000;
     }
 
     @Override
     public HealthcheckStatus check() {
-        return System.currentTimeMillis() > validdRegistationTime
+        return System.currentTimeMillis() > validRegistrationTime
                ? HealthcheckStatus.healthy
                : HealthcheckStatus.unhealthy;
     }

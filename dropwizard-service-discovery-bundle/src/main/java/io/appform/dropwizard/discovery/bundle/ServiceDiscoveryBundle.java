@@ -106,7 +106,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
 
         int refreshTime = serviceDiscoveryConfiguration.getRefreshTimeMs() == 0
-                          ? 1000
+                          ? Constants.DEFAULT_REFRESH_TIME
                           : serviceDiscoveryConfiguration.getRefreshTimeMs();
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
