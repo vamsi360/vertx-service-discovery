@@ -27,14 +27,14 @@ import javax.validation.constraints.NotNull;
 /**
  * Ranger configuration.
  */
-@NoArgsConstructor
 @Data
 @EqualsAndHashCode
 @ToString
+@NoArgsConstructor
 public class ServiceDiscoveryConfiguration {
     @NotNull
     @NotEmpty
-    private String namespace = "default";
+    private String namespace = Constants.DEFAULT_NAMESPACE;
 
     @NotNull
     @NotEmpty

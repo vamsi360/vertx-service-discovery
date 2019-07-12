@@ -21,6 +21,7 @@ package io.appform.dropwizard.discovery.bundle;
  * Constants
  */
 public class Constants {
+    public static final String DEFAULT_NAMESPACE = "default";
     public static final String DEFAULT_HOST = "__DEFAULT_SERVICE_HOST";
     public static final int DEFAULT_PORT = -1;
 
