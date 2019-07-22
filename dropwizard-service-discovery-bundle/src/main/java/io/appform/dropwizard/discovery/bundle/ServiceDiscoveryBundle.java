@@ -200,6 +200,9 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
                                           ? Constants.DEFAULT_DW_CHECK_INTERVAl
                                           : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
+        final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval
+                                           ? dwMonitoringInterval + 1
+                                           : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
         ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
@@ -222,7 +225,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withIsolatedHealthMonitor(
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
-                                16_000, environment))
+                                dwMonitoringStaleness * 1_000, environment))
                 .withHealthUpdateIntervalMs(refreshTime);
 
         final List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();

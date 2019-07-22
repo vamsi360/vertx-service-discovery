@@ -70,6 +70,8 @@ public class ServiceDiscoveryConfiguration {
 
     private int dropwizardCheckInterval = Constants.DEFAULT_DW_CHECK_INTERVAl;
 
+    private int dropwizardCheckStaleness;
+
     @Builder
     public ServiceDiscoveryConfiguration(
             String namespace,
@@ -82,7 +84,8 @@ public class ServiceDiscoveryConfiguration {
             boolean disableWatchers,
             long initialDelaySeconds,
             boolean initialRotationStatus,
-            int dropwizardCheckInterval) {
+            int dropwizardCheckInterval,
+            int dropwizardCheckStaleness) {
         this.namespace = Strings.isNullOrEmpty(namespace)
                          ? Constants.DEFAULT_NAMESPACE
                          : namespace;
@@ -104,5 +107,6 @@ public class ServiceDiscoveryConfiguration {
         this.dropwizardCheckInterval = dropwizardCheckInterval == 0
                                        ? Constants.DEFAULT_DW_CHECK_INTERVAl
                                        : dropwizardCheckInterval;
+        this.dropwizardCheckStaleness = dropwizardCheckStaleness;
     }
 }
