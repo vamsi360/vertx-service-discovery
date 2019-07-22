@@ -200,7 +200,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
                                           ? Constants.DEFAULT_DW_CHECK_INTERVAl
                                           : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
-        final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval
+        final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                                            ? dwMonitoringInterval + 1
                                            : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
         ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()

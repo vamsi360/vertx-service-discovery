@@ -1,0 +1,163 @@
+/*
+ * Copyright (c) 2016 Santanu Sinha <santanu.sinha@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package io.appform.dropwizard.discovery.bundle;
+
+import com.codahale.metrics.health.HealthCheck;
+import com.codahale.metrics.health.HealthCheckRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flipkart.ranger.healthcheck.HealthcheckStatus;
+import com.flipkart.ranger.model.ServiceNode;
+import io.appform.dropwizard.discovery.common.ShardInfo;
+import io.dropwizard.Configuration;
+import io.dropwizard.jersey.DropwizardResourceConfig;
+import io.dropwizard.jersey.setup.JerseyEnvironment;
+import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
+import io.dropwizard.setup.AdminEnvironment;
+import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.setup.Environment;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.curator.test.TestingCluster;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+
+@Slf4j
+public class ServiceDiscoveryBundleDwStalenessMonitorTest {
+
+    private final HealthCheckRegistry healthChecks = new HealthCheckRegistry();
+    private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
+    private final LifecycleEnvironment lifecycleEnvironment = new LifecycleEnvironment();
+    private final Environment environment = mock(Environment.class);
+    private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
+    private final Configuration configuration = mock(Configuration.class);
+
+
+    private final ServiceDiscoveryBundle<Configuration> bundle = new ServiceDiscoveryBundle<Configuration>() {
+        @Override
+        protected ServiceDiscoveryConfiguration getRangerConfiguration(Configuration configuration) {
+            return serviceDiscoveryConfiguration;
+        }
+
+        @Override
+        protected String getServiceName(Configuration configuration) {
+            return "TestService";
+        }
+
+        @Override
+        protected int getPort(Configuration configuration) {
+            return 21000;
+        }
+
+        @Override
+        protected String getHost() {
+            return "CustomHost";
+        }
+
+    };
+
+    private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
+    private final TestingCluster testingCluster = new TestingCluster(1);
+
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    private HealthcheckStatus status = HealthcheckStatus.healthy;
+
+    @Before
+    public void setup() throws Exception {
+        healthChecks.register("twice-healthy-only", new HealthCheck() {
+            private AtomicInteger counter = new AtomicInteger(1);
+
+            @Override
+            protected Result check() throws Exception {
+                if (counter.decrementAndGet() < 0) {
+                    Thread.sleep(5000);
+                }
+                return Result.healthy();
+            }
+        });
+
+        when(jerseyEnvironment.getResourceConfig()).thenReturn(new DropwizardResourceConfig());
+        when(environment.jersey()).thenReturn(jerseyEnvironment);
+        when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
+        when(environment.healthChecks()).thenReturn(healthChecks);
+        when(environment.getObjectMapper()).thenReturn(new ObjectMapper());
+        AdminEnvironment adminEnvironment = mock(AdminEnvironment.class);
+        doNothing().when(adminEnvironment).addTask(any());
+        when(environment.admin()).thenReturn(adminEnvironment);
+
+        testingCluster.start();
+
+        serviceDiscoveryConfiguration = ServiceDiscoveryConfiguration.builder()
+                                                                     .zookeeper(testingCluster.getConnectString())
+                                                                     .namespace("test")
+                                                                     .environment("testing")
+                                                                     .connectionRetryIntervalMillis(5000)
+                                                                     .publishedHost("TestHost")
+                                                                     .publishedPort(8021)
+                                                                     .initialRotationStatus(true)
+                                                                     .dropwizardCheckInterval(2)
+                                                                     .dropwizardCheckStaleness(2)
+                                                                     .build();
+        bundle.initialize(bootstrap);
+
+        bundle.run(configuration, environment);
+        final AtomicBoolean started = new AtomicBoolean(false);
+        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
+            try {
+                object.start();
+                started.set(true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }));
+        while (!started.get()) {
+            Thread.sleep(1000);
+            log.debug("Waiting for framework to start...");
+        }
+
+        bundle.registerHealthcheck(() -> status);
+    }
+
+    @Test
+    public void testDiscovery() throws Exception {
+        Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+        System.out.println(environment.getObjectMapper().writeValueAsString(info));
+        assertTrue(info.isPresent());
+        assertEquals("testing", info.get().getNodeData().getEnvironment());
+        assertEquals("CustomHost", info.get().getHost());
+        assertEquals(21000, info.get().getPort());
+
+        /* since healtcheck is sleeping for 5secs, the staleness allowed is 2+1=3 seconds, node should vanish after
+           3 seconds */
+        Thread.sleep(2000);
+        assertTrue(bundle.getServiceDiscoveryClient().getNode().isPresent());
+        Thread.sleep(1000);
+        info = bundle.getServiceDiscoveryClient().getNode();
+        assertFalse(info.isPresent());
+    }
+}
