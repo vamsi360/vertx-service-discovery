@@ -90,7 +90,7 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
     @Before
     public void setup() throws Exception {
         healthChecks.register("healthy-once-but-then-sleep5", new HealthCheck() {
-            private AtomicInteger counter = new AtomicInteger(1);
+            private AtomicInteger counter = new AtomicInteger(2);
 
             @Override
             protected Result check() throws Exception {
