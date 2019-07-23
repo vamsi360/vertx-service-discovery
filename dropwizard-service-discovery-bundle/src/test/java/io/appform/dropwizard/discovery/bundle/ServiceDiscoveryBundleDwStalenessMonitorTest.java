@@ -95,7 +95,7 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
             @Override
             protected Result check() throws Exception {
                 if (counter.decrementAndGet() < 0) {
-                    Thread.sleep(5000);
+                    Thread.sleep(7000);
                 }
                 return Result.healthy();
             }
