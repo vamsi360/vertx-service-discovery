@@ -90,7 +90,7 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
     @Before
     public void setup() throws Exception {
         healthChecks.register("healthy-once-but-then-sleep5", new HealthCheck() {
-            private AtomicInteger counter = new AtomicInteger(2);
+            private AtomicInteger counter = new AtomicInteger(1);
 
             @Override
             protected Result check() throws Exception {
@@ -156,7 +156,7 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
            3 seconds */
         Thread.sleep(2000);
         assertTrue(bundle.getServiceDiscoveryClient().getNode().isPresent());
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         info = bundle.getServiceDiscoveryClient().getNode();
         assertFalse(info.isPresent());
     }
