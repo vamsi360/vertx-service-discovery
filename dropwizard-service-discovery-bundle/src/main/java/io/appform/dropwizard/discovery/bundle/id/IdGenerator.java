@@ -73,7 +73,7 @@ public class IdGenerator {
         nodeId = node;
     }
 
-    public static void cleanUp(){
+    public static void cleanUp() {
         globalConstraints.clear();
         domainSpecificConstraints.clear();
     }
