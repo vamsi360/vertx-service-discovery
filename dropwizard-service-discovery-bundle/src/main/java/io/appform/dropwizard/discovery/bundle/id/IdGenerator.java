@@ -73,6 +73,11 @@ public class IdGenerator {
         nodeId = node;
     }
 
+    public static void cleanUp(){
+        globalConstraints.clear();
+        domainSpecificConstraints.clear();
+    }
+
     public static void initialize(
             int node, List<IdValidationConstraint> globalConstraints, Map<String, List<IdValidationConstraint>> domainSpecificConstraints) {
         nodeId = node;
