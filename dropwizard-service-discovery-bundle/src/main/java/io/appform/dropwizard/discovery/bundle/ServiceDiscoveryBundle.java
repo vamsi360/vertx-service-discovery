@@ -105,9 +105,13 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final int port = getPort(configuration);
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
 
-        int refreshTime = serviceDiscoveryConfiguration.getRefreshTimeMs() == 0
-                          ? Constants.DEFAULT_REFRESH_TIME
-                          : serviceDiscoveryConfiguration.getRefreshTimeMs();
+        int healthUpdateInterval = serviceDiscoveryConfiguration.getHealthUpdateIntervalMs();
+        if (healthUpdateInterval < Constants.MINIMUM_HEALTH_UPDATE_INTERVAL){
+            healthUpdateInterval = Constants.MINIMUM_HEALTH_UPDATE_INTERVAL;
+            log.warn("Health update interval too low: {} ms. Has been upgraded to {} ms ",
+                    serviceDiscoveryConfiguration.getHealthUpdateIntervalMs(),
+                    Constants.MINIMUM_HEALTH_UPDATE_INTERVAL);
+        }
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
                 .namespace(namespace)
@@ -120,8 +124,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                                                serviceName,
                                                hostname,
                                                port,
-                                               refreshTime);
-        serviceDiscoveryClient = buildDiscoveryClient(environment, namespace, serviceName, refreshTime);
+                                               healthUpdateInterval);
+        serviceDiscoveryClient = buildDiscoveryClient(environment, namespace, serviceName, healthUpdateInterval);
 
         environment.lifecycle()
                 .manage(new ServiceDiscoveryManager(serviceName));
@@ -190,7 +194,10 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
-            String serviceName, String hostname, int port, int refreshTime) {
+            String serviceName,
+            String hostname,
+            int port,
+            int healthUpdateIntervalMs) {
         final ShardInfo nodeInfo = ShardInfo.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
@@ -226,7 +233,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
                                 dwMonitoringStaleness * 1_000, environment))
-                .withHealthUpdateIntervalMs(refreshTime);
+                .withHealthUpdateIntervalMs(healthUpdateIntervalMs);
 
         final List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {

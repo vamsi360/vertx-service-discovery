@@ -58,7 +58,7 @@ public class ServiceDiscoveryConfiguration {
     @Max(65535)
     private int publishedPort = Constants.DEFAULT_PORT;
 
-    private int refreshTimeMs;
+    private int healthUpdateIntervalMs;
 
     private boolean disableWatchers;
 
@@ -80,33 +80,33 @@ public class ServiceDiscoveryConfiguration {
             int connectionRetryIntervalMillis,
             String publishedHost,
             int publishedPort,
-            int refreshTimeMs,
+            int healthUpdateIntervalMs,
             boolean disableWatchers,
             long initialDelaySeconds,
             boolean initialRotationStatus,
             int dropwizardCheckInterval,
             int dropwizardCheckStaleness) {
         this.namespace = Strings.isNullOrEmpty(namespace)
-                         ? Constants.DEFAULT_NAMESPACE
-                         : namespace;
+                ? Constants.DEFAULT_NAMESPACE
+                : namespace;
         this.environment = environment;
         this.zookeeper = zookeeper;
         this.connectionRetryIntervalMillis = connectionRetryIntervalMillis == 0
                 ? Constants.DEFAULT_RETRY_CONN_INTERVAL
                 : connectionRetryIntervalMillis;
         this.publishedHost = Strings.isNullOrEmpty(publishedHost)
-                             ? Constants.DEFAULT_HOST
-                             : publishedHost;
+                ? Constants.DEFAULT_HOST
+                : publishedHost;
         this.publishedPort = publishedPort == 0
-                            ? Constants.DEFAULT_PORT
-                            : publishedPort;
-        this.refreshTimeMs = refreshTimeMs;
+                ? Constants.DEFAULT_PORT
+                : publishedPort;
+        this.healthUpdateIntervalMs = healthUpdateIntervalMs;
         this.disableWatchers = disableWatchers;
         this.initialDelaySeconds = initialDelaySeconds;
         this.initialRotationStatus = initialRotationStatus;
         this.dropwizardCheckInterval = dropwizardCheckInterval == 0
-                                       ? Constants.DEFAULT_DW_CHECK_INTERVAl
-                                       : dropwizardCheckInterval;
+                ? Constants.DEFAULT_DW_CHECK_INTERVAl
+                : dropwizardCheckInterval;
         this.dropwizardCheckStaleness = dropwizardCheckStaleness;
     }
 }
