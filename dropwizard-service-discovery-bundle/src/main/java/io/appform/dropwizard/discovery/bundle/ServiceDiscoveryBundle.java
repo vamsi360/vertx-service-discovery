@@ -105,31 +105,24 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final int port = getPort(configuration);
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
 
-        int healthUpdateInterval = serviceDiscoveryConfiguration.getHealthUpdateIntervalMs();
-        if (healthUpdateInterval < Constants.MINIMUM_HEALTH_UPDATE_INTERVAL){
-            healthUpdateInterval = Constants.MINIMUM_HEALTH_UPDATE_INTERVAL;
-            log.warn("Health update interval too low: {} ms. Has been upgraded to {} ms ",
-                    serviceDiscoveryConfiguration.getHealthUpdateIntervalMs(),
-                    Constants.MINIMUM_HEALTH_UPDATE_INTERVAL);
-        }
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
                 .namespace(namespace)
                 .retryPolicy(new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()))
                 .build();
-
         serviceProvider = buildServiceProvider(environment,
-                                               objectMapper,
-                                               namespace,
-                                               serviceName,
-                                               hostname,
-                                               port,
-                                               healthUpdateInterval);
-        serviceDiscoveryClient = buildDiscoveryClient(environment, namespace, serviceName, healthUpdateInterval);
+                objectMapper,
+                namespace,
+                serviceName,
+                hostname,
+                port
+        );
+        serviceDiscoveryClient = buildDiscoveryClient(environment,
+                namespace,
+                serviceName);
 
         environment.lifecycle()
                 .manage(new ServiceDiscoveryManager(serviceName));
-
         environment.jersey()
                 .register(new InfoResource(serviceDiscoveryClient));
         environment.admin()
@@ -177,15 +170,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private ServiceDiscoveryClient buildDiscoveryClient(
             Environment environment,
             String namespace,
-            String serviceName,
-            int refreshTime) {
+            String serviceName) {
         return ServiceDiscoveryClient.fromCurator()
                 .curator(curator)
                 .namespace(namespace)
                 .serviceName(serviceName)
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .objectMapper(environment.getObjectMapper())
-                .refreshTimeMs(refreshTime)
+                .refreshTimeMs(serviceDiscoveryConfiguration.getNodeRefreshIntervalMs())
                 .disableWatchers(serviceDiscoveryConfiguration.isDisableWatchers())
                 .build();
     }
@@ -196,20 +188,27 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             String namespace,
             String serviceName,
             String hostname,
-            int port,
-            int healthUpdateIntervalMs) {
+            int port) {
         final ShardInfo nodeInfo = ShardInfo.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
         final long initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
-                                            ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
-                                            : 0;
+                ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
+                : 0;
         final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
-                                          ? Constants.DEFAULT_DW_CHECK_INTERVAl
-                                          : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
+                ? Constants.DEFAULT_DW_CHECK_INTERVAl
+                : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
         final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
-                                           ? dwMonitoringInterval + 1
-                                           : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
+                ? dwMonitoringInterval + 1
+                : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
+        int healthUpdateInterval = serviceDiscoveryConfiguration.getHealthUpdateIntervalMs();
+        if (healthUpdateInterval < Constants.MINIMUM_HEALTH_UPDATE_INTERVAL){
+            healthUpdateInterval = Constants.MINIMUM_HEALTH_UPDATE_INTERVAL;
+            log.warn("Health update interval too low: {} ms. Has been upgraded to {} ms ",
+                    serviceDiscoveryConfiguration.getHealthUpdateIntervalMs(),
+                    Constants.MINIMUM_HEALTH_UPDATE_INTERVAL);
+        }
+
         ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
@@ -217,8 +216,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withSerializer(data -> {
                     try {
                         return objectMapper.writeValueAsBytes(data);
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;
@@ -233,7 +231,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
                                 dwMonitoringStaleness * 1_000, environment))
-                .withHealthUpdateIntervalMs(healthUpdateIntervalMs);
+                .withHealthUpdateIntervalMs(healthUpdateInterval);
 
         final List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {

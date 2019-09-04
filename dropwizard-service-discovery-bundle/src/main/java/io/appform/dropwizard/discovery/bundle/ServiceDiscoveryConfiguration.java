@@ -60,6 +60,8 @@ public class ServiceDiscoveryConfiguration {
 
     private int healthUpdateIntervalMs;
 
+    private int nodeRefreshIntervalMs;
+
     private boolean disableWatchers;
 
     @Min(0)

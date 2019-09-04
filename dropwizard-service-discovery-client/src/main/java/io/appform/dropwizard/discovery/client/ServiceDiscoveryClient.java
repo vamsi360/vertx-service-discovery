@@ -67,6 +67,15 @@ public class ServiceDiscoveryClient {
             CuratorFramework curator,
             int refreshTimeMs,
             boolean disableWatchers) {
+
+        int effectiveRefreshTimeMs = refreshTimeMs;
+        if (effectiveRefreshTimeMs < Constants.MINIMUM_REFRESH_TIME){
+            effectiveRefreshTimeMs = Constants.MINIMUM_REFRESH_TIME;
+            log.warn("Node info update interval too low: {} ms. Has been upgraded to {} ms ",
+                    refreshTimeMs,
+                    Constants.MINIMUM_REFRESH_TIME);
+        }
+
         this.criteria = ShardInfo.builder()
                 .environment(environment)
                 .build();
@@ -85,7 +94,7 @@ public class ServiceDiscoveryClient {
                     }
                     return null;
                 })
-                .withNodeRefreshIntervalMs(refreshTimeMs)
+                .withNodeRefreshIntervalMs(effectiveRefreshTimeMs)
                 .withDisableWatchers(disableWatchers)
                 .build();
     }
