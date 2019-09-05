@@ -195,22 +195,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
         final long initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
-                ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
-                : 0;
+                                            ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
+                                            : 0;
         final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
-                ? Constants.DEFAULT_DW_CHECK_INTERVAl
-                : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
+                                        ? Constants.DEFAULT_DW_CHECK_INTERVAl
+                                        : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
         final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
-                ? dwMonitoringInterval + 1
-                : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        int healthUpdateInterval = serviceDiscoveryConfiguration.getRefreshTimeMs();
-        if (healthUpdateInterval < Constants.MINIMUM_REFRESH_TIME){
-            healthUpdateInterval = Constants.MINIMUM_REFRESH_TIME;
-            log.warn("Health update interval too low: {} ms. Has been upgraded to {} ms ",
-                    serviceDiscoveryConfiguration.getRefreshTimeMs(),
-                    Constants.MINIMUM_REFRESH_TIME);
-        }
-
+                                        ? dwMonitoringInterval + 1
+                                        : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
         ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
@@ -233,7 +225,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
                                 dwMonitoringStaleness * 1_000, environment))
-                .withHealthUpdateIntervalMs(healthUpdateInterval);
+                .withHealthUpdateIntervalMs(serviceDiscoveryConfiguration.getRefreshTimeMs());
 
         final List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {
