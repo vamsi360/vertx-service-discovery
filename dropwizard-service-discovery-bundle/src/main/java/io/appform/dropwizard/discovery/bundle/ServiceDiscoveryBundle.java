@@ -188,9 +188,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
-            String serviceName,
-            String hostname,
-            int port) {
+            String serviceName, String hostname, int port) {
         final ShardInfo nodeInfo = ShardInfo.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
@@ -198,11 +196,11 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                                             ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
                                             : 0;
         final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
-                                        ? Constants.DEFAULT_DW_CHECK_INTERVAl
-                                        : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
+                                          ? Constants.DEFAULT_DW_CHECK_INTERVAl
+                                          : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
         final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
-                                        ? dwMonitoringInterval + 1
-                                        : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
+                                           ? dwMonitoringInterval + 1
+                                           : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
         ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
@@ -210,7 +208,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withSerializer(data -> {
                     try {
                         return objectMapper.writeValueAsBytes(data);
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;

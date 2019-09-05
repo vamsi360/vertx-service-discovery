@@ -26,7 +26,6 @@ public class Constants {
     public static final int DEFAULT_PORT = -1;
     public static final int DEFAULT_DW_CHECK_INTERVAl = 15;
     public static final int DEFAULT_RETRY_CONN_INTERVAL = 5000;
-    public static final int MINIMUM_REFRESH_TIME = 5000;
 
     private Constants() {}
 }
