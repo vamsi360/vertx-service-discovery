@@ -28,8 +28,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import io.appform.dropwizard.discovery.bundle.healthchecks.InternalHealthChecker;
 import io.appform.dropwizard.discovery.bundle.healthchecks.InitialDelayChecker;
+import io.appform.dropwizard.discovery.bundle.healthchecks.InternalHealthChecker;
 import io.appform.dropwizard.discovery.bundle.healthchecks.RotationCheck;
 import io.appform.dropwizard.discovery.bundle.id.IdGenerator;
 import io.appform.dropwizard.discovery.bundle.id.NodeIdManager;
@@ -110,14 +110,16 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .namespace(namespace)
                 .retryPolicy(new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()))
                 .build();
-        serviceProvider = buildServiceProvider(environment,
+        serviceProvider = buildServiceProvider(
+                environment,
                 objectMapper,
                 namespace,
                 serviceName,
                 hostname,
                 port
         );
-        serviceDiscoveryClient = buildDiscoveryClient(environment,
+        serviceDiscoveryClient = buildDiscoveryClient(
+                environment,
                 namespace,
                 serviceName);
 
@@ -177,7 +179,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .serviceName(serviceName)
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .objectMapper(environment.getObjectMapper())
-                .refreshTimeMs(serviceDiscoveryConfiguration.getNodeRefreshIntervalMs())
+                .refreshTimeMs(serviceDiscoveryConfiguration.getRefreshTimeMs())
                 .disableWatchers(serviceDiscoveryConfiguration.isDisableWatchers())
                 .build();
     }
@@ -201,12 +203,12 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                 ? dwMonitoringInterval + 1
                 : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        int healthUpdateInterval = serviceDiscoveryConfiguration.getHealthUpdateIntervalMs();
-        if (healthUpdateInterval < Constants.MINIMUM_HEALTH_UPDATE_INTERVAL){
-            healthUpdateInterval = Constants.MINIMUM_HEALTH_UPDATE_INTERVAL;
+        int healthUpdateInterval = serviceDiscoveryConfiguration.getRefreshTimeMs();
+        if (healthUpdateInterval < Constants.MINIMUM_REFRESH_TIME){
+            healthUpdateInterval = Constants.MINIMUM_REFRESH_TIME;
             log.warn("Health update interval too low: {} ms. Has been upgraded to {} ms ",
-                    serviceDiscoveryConfiguration.getHealthUpdateIntervalMs(),
-                    Constants.MINIMUM_HEALTH_UPDATE_INTERVAL);
+                    serviceDiscoveryConfiguration.getRefreshTimeMs(),
+                    Constants.MINIMUM_REFRESH_TIME);
         }
 
         ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()

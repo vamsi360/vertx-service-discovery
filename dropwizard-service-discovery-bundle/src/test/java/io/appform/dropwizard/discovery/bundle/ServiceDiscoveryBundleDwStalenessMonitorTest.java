@@ -120,8 +120,8 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
                                                                      .publishedHost("TestHost")
                                                                      .publishedPort(8021)
                                                                      .initialRotationStatus(true)
-                                                                     .dropwizardCheckInterval(2)
-                                                                     .dropwizardCheckStaleness(2)
+                                                                     .dropwizardCheckInterval(6)
+                                                                     .dropwizardCheckStaleness(6)
                                                                      .build();
         bundle.initialize(bootstrap);
 
@@ -154,9 +154,9 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
 
         /* since healtcheck is sleeping for 5secs, the staleness allowed is 2+1=3 seconds, node should vanish after
            3 seconds */
-        Thread.sleep(2000);
+        Thread.sleep(6000);
         assertTrue(bundle.getServiceDiscoveryClient().getNode().isPresent());
-        Thread.sleep(2000);
+        Thread.sleep(6000);
         info = bundle.getServiceDiscoveryClient().getNode();
         assertFalse(info.isPresent());
     }

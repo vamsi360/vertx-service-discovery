@@ -58,9 +58,7 @@ public class ServiceDiscoveryConfiguration {
     @Max(65535)
     private int publishedPort = Constants.DEFAULT_PORT;
 
-    private int healthUpdateIntervalMs;
-
-    private int nodeRefreshIntervalMs;
+    private int refreshTimeMs;
 
     private boolean disableWatchers;
 
@@ -82,7 +80,7 @@ public class ServiceDiscoveryConfiguration {
             int connectionRetryIntervalMillis,
             String publishedHost,
             int publishedPort,
-            int healthUpdateIntervalMs,
+            int refreshTimeMs,
             boolean disableWatchers,
             long initialDelaySeconds,
             boolean initialRotationStatus,
@@ -102,7 +100,7 @@ public class ServiceDiscoveryConfiguration {
         this.publishedPort = publishedPort == 0
                 ? Constants.DEFAULT_PORT
                 : publishedPort;
-        this.healthUpdateIntervalMs = healthUpdateIntervalMs;
+        this.refreshTimeMs = refreshTimeMs;
         this.disableWatchers = disableWatchers;
         this.initialDelaySeconds = initialDelaySeconds;
         this.initialRotationStatus = initialRotationStatus;
