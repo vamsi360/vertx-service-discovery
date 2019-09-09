@@ -189,19 +189,19 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             ObjectMapper objectMapper,
             String namespace,
             String serviceName, String hostname, int port) {
-        final ShardInfo nodeInfo = ShardInfo.builder()
+        val nodeInfo = ShardInfo.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
-        final long initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
+        val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
                                             ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
                                             : 0;
-        final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
+        val dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
                                           ? Constants.DEFAULT_DW_CHECK_INTERVAl
                                           : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
-        final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
+        val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                                            ? dwMonitoringInterval + 1
                                            : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
+        val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
@@ -224,9 +224,10 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
                                 dwMonitoringStaleness * 1_000, environment))
-                .withHealthUpdateIntervalMs(serviceDiscoveryConfiguration.getRefreshTimeMs());
+                .withHealthUpdateIntervalMs(serviceDiscoveryConfiguration.getRefreshTimeMs())
+                .withStaleUpdateThresholdMs(10000);
 
-        final List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
+        val healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {
             healthMonitors.forEach(serviceProviderBuilder::withIsolatedHealthMonitor);
         }
