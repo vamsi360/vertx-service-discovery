@@ -151,7 +151,7 @@ public class ServiceDiscoveryBundleDwMonitorTest {
 
         /* after 2 turns, the healthcheck will return unhealthy, and since dropwizardCheckInterval
            is 2 seconds, within 2*2=4 seconds, nodes should be absent */
-        Thread.sleep(5000);
+        Thread.sleep(11000);
         info = bundle.getServiceDiscoveryClient().getNode();
         assertFalse(info.isPresent());
     }

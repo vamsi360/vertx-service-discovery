@@ -28,8 +28,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import io.appform.dropwizard.discovery.bundle.healthchecks.InternalHealthChecker;
 import io.appform.dropwizard.discovery.bundle.healthchecks.InitialDelayChecker;
+import io.appform.dropwizard.discovery.bundle.healthchecks.InternalHealthChecker;
 import io.appform.dropwizard.discovery.bundle.healthchecks.RotationCheck;
 import io.appform.dropwizard.discovery.bundle.id.IdGenerator;
 import io.appform.dropwizard.discovery.bundle.id.NodeIdManager;
@@ -105,27 +105,26 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final int port = getPort(configuration);
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
 
-        int refreshTime = serviceDiscoveryConfiguration.getRefreshTimeMs() == 0
-                          ? Constants.DEFAULT_REFRESH_TIME
-                          : serviceDiscoveryConfiguration.getRefreshTimeMs();
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
                 .namespace(namespace)
                 .retryPolicy(new RetryForever(serviceDiscoveryConfiguration.getConnectionRetryIntervalMillis()))
                 .build();
-
-        serviceProvider = buildServiceProvider(environment,
-                                               objectMapper,
-                                               namespace,
-                                               serviceName,
-                                               hostname,
-                                               port,
-                                               refreshTime);
-        serviceDiscoveryClient = buildDiscoveryClient(environment, namespace, serviceName, refreshTime);
+        serviceProvider = buildServiceProvider(
+                environment,
+                objectMapper,
+                namespace,
+                serviceName,
+                hostname,
+                port
+        );
+        serviceDiscoveryClient = buildDiscoveryClient(
+                environment,
+                namespace,
+                serviceName);
 
         environment.lifecycle()
                 .manage(new ServiceDiscoveryManager(serviceName));
-
         environment.jersey()
                 .register(new InfoResource(serviceDiscoveryClient));
         environment.admin()
@@ -173,15 +172,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private ServiceDiscoveryClient buildDiscoveryClient(
             Environment environment,
             String namespace,
-            String serviceName,
-            int refreshTime) {
+            String serviceName) {
         return ServiceDiscoveryClient.fromCurator()
                 .curator(curator)
                 .namespace(namespace)
                 .serviceName(serviceName)
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .objectMapper(environment.getObjectMapper())
-                .refreshTimeMs(refreshTime)
+                .refreshTimeMs(serviceDiscoveryConfiguration.getRefreshTimeMs())
                 .disableWatchers(serviceDiscoveryConfiguration.isDisableWatchers())
                 .build();
     }
@@ -190,20 +188,22 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
-            String serviceName, String hostname, int port, int refreshTime) {
-        final ShardInfo nodeInfo = ShardInfo.builder()
+            String serviceName,
+            String hostname,
+            int port) {
+        val nodeInfo = ShardInfo.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
-        final long initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
+        val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
                                             ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
                                             : 0;
-        final long dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
+        val dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
                                           ? Constants.DEFAULT_DW_CHECK_INTERVAl
                                           : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
-        final long dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
+        val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
                                            ? dwMonitoringInterval + 1
                                            : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
-        ServiceProviderBuilder<ShardInfo> serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
+        val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
                 .withServiceName(serviceName)
@@ -226,9 +226,10 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
                                 dwMonitoringStaleness * 1_000, environment))
-                .withHealthUpdateIntervalMs(refreshTime);
+                .withHealthUpdateIntervalMs(serviceDiscoveryConfiguration.getRefreshTimeMs())
+                .withStaleUpdateThresholdMs(10000);
 
-        final List<IsolatedHealthMonitor> healthMonitors = getHealthMonitors();
+        val healthMonitors = getHealthMonitors();
         if (healthMonitors != null && !healthMonitors.isEmpty()) {
             healthMonitors.forEach(serviceProviderBuilder::withIsolatedHealthMonitor);
         }

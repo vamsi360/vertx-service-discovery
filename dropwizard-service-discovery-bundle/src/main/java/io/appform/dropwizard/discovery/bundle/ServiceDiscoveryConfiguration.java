@@ -92,14 +92,14 @@ public class ServiceDiscoveryConfiguration {
         this.environment = environment;
         this.zookeeper = zookeeper;
         this.connectionRetryIntervalMillis = connectionRetryIntervalMillis == 0
-                ? Constants.DEFAULT_RETRY_CONN_INTERVAL
-                : connectionRetryIntervalMillis;
+                                             ? Constants.DEFAULT_RETRY_CONN_INTERVAL
+                                             : connectionRetryIntervalMillis;
         this.publishedHost = Strings.isNullOrEmpty(publishedHost)
                              ? Constants.DEFAULT_HOST
                              : publishedHost;
         this.publishedPort = publishedPort == 0
-                            ? Constants.DEFAULT_PORT
-                            : publishedPort;
+                             ? Constants.DEFAULT_PORT
+                             : publishedPort;
         this.refreshTimeMs = refreshTimeMs;
         this.disableWatchers = disableWatchers;
         this.initialDelaySeconds = initialDelaySeconds;
