@@ -188,7 +188,9 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             Environment environment,
             ObjectMapper objectMapper,
             String namespace,
-            String serviceName, String hostname, int port) {
+            String serviceName,
+            String hostname,
+            int port) {
         val nodeInfo = ShardInfo.builder()
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
