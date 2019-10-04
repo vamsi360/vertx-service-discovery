@@ -52,11 +52,11 @@ public class NodeIdManager {
 
     public int fixNodeId() {
         try {
-            log.info("Waiting for curator to markStarted");
+            log.info("Waiting for curator to start");
             curatorFramework.blockUntilConnected();
             log.info("Curator started");
         } catch (InterruptedException e) {
-            log.error("Wait for curator markStarted interrupted", e);
+            log.error("Wait for curator start interrupted", e);
         }
         Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder()
                 .retryIfResult(Predicates.equalTo(false))

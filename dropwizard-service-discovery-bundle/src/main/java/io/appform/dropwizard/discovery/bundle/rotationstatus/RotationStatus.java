@@ -20,7 +20,7 @@ package io.appform.dropwizard.discovery.bundle.rotationstatus;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Current rotation started
+ * Current rotation status
  */
 public class RotationStatus {
     private AtomicBoolean inRotation;

@@ -118,9 +118,6 @@ public class ServiceDiscoveryBundleRotationTest {
         assertEquals("TestHost", info.get().getHost());
         assertEquals(8021, info.get().getPort());
 
-
-        //started = HealthcheckStatus.unhealthy;
-
         OORTask oorTask = new OORTask(rotationStatus);
         oorTask.execute(null, null);
 
