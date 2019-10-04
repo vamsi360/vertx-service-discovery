@@ -33,6 +33,7 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -72,9 +73,6 @@ public class ServiceDiscoveryBundleTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
     private HealthcheckStatus status = HealthcheckStatus.healthy;
 
     @Before
@@ -101,22 +99,11 @@ public class ServiceDiscoveryBundleTest {
                                     .initialRotationStatus(true)
                                     .build();
         bundle.initialize(bootstrap);
-
         bundle.run(configuration, environment);
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        bundle.getServerStatus().markStarted();
+        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.start();
         }
-
         bundle.registerHealthcheck(() -> status);
     }
 

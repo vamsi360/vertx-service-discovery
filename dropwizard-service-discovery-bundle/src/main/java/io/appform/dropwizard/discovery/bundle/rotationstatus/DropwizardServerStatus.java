@@ -20,24 +20,25 @@ package io.appform.dropwizard.discovery.bundle.rotationstatus;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Current rotation started
+ * Current server startup started
  */
-public class RotationStatus {
-    private AtomicBoolean inRotation;
+public class DropwizardServerStatus {
 
-    public RotationStatus(boolean initialStatus) {
-        inRotation = new AtomicBoolean(initialStatus);
+    private AtomicBoolean serverStarted;
+
+    public DropwizardServerStatus(boolean initialStatus) {
+        serverStarted = new AtomicBoolean(initialStatus);
     }
 
-    public void oor() {
-        inRotation.set(false);
+    public void markStarted() {
+        serverStarted.set(true);
     }
 
-    public void bir() {
-        inRotation.set(true);
+    public void markStopped() {
+        serverStarted.set(false);
     }
 
-    public boolean status() {
-        return inRotation.get();
+    public boolean started() {
+        return serverStarted.get();
     }
 }

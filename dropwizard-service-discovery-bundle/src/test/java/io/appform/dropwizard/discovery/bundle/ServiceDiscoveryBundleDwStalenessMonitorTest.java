@@ -32,13 +32,13 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
@@ -82,9 +82,6 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
     private HealthcheckStatus status = HealthcheckStatus.healthy;
 
     @Before
@@ -113,33 +110,22 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
         testingCluster.start();
 
         serviceDiscoveryConfiguration = ServiceDiscoveryConfiguration.builder()
-                                                                     .zookeeper(testingCluster.getConnectString())
-                                                                     .namespace("test")
-                                                                     .environment("testing")
-                                                                     .connectionRetryIntervalMillis(5000)
-                                                                     .publishedHost("TestHost")
-                                                                     .publishedPort(8021)
-                                                                     .initialRotationStatus(true)
-                                                                     .dropwizardCheckInterval(6)
-                                                                     .dropwizardCheckStaleness(6)
-                                                                     .build();
+                .zookeeper(testingCluster.getConnectString())
+                .namespace("test")
+                .environment("testing")
+                .connectionRetryIntervalMillis(5000)
+                .publishedHost("TestHost")
+                .publishedPort(8021)
+                .initialRotationStatus(true)
+                .dropwizardCheckInterval(6)
+                .dropwizardCheckStaleness(6)
+                .build();
         bundle.initialize(bootstrap);
-
         bundle.run(configuration, environment);
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        bundle.getServerStatus().markStarted();
+        for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()) {
+            lifeCycle.start();
         }
-
         bundle.registerHealthcheck(() -> status);
     }
 

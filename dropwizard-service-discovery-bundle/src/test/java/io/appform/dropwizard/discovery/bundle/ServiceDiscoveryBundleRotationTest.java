@@ -34,6 +34,7 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -73,11 +74,6 @@ public class ServiceDiscoveryBundleRotationTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
-    private HealthcheckStatus status = HealthcheckStatus.healthy;
-
     private RotationStatus rotationStatus;
 
     @Before
@@ -104,24 +100,12 @@ public class ServiceDiscoveryBundleRotationTest {
                                     .initialRotationStatus(true)
                                     .build();
         bundle.initialize(bootstrap);
-
         bundle.run(configuration, environment);
+        bundle.getServerStatus().markStarted();
         rotationStatus = bundle.getRotationStatus();
-
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.start();
         }
-
     }
 
     @Test
@@ -135,7 +119,7 @@ public class ServiceDiscoveryBundleRotationTest {
         assertEquals(8021, info.get().getPort());
 
 
-        //status = HealthcheckStatus.unhealthy;
+        //started = HealthcheckStatus.unhealthy;
 
         OORTask oorTask = new OORTask(rotationStatus);
         oorTask.execute(null, null);
