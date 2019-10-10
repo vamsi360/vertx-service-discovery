@@ -133,7 +133,7 @@ public class ServiceDiscoveryBundleDwMonitorTest {
                                                                      .build();
         bundle.initialize(bootstrap);
         bundle.run(configuration, environment);
-
+        bundle.getServerStatus().markStarted();
         final AtomicBoolean started = new AtomicBoolean(false);
         executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
             try {
@@ -147,7 +147,6 @@ public class ServiceDiscoveryBundleDwMonitorTest {
             Thread.sleep(1000);
             log.debug("Waiting for framework to start...");
         }
-        bundle.getServerStatus().markStarted();
         bundle.registerHealthcheck(() -> status);
     }
 

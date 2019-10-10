@@ -123,6 +123,7 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
                                     .build();
         bundle.initialize(bootstrap);
         bundle.run(configuration, environment);
+        bundle.getServerStatus().markStarted();
         final AtomicBoolean started = new AtomicBoolean(false);
         executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
             try {
@@ -136,14 +137,12 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
             Thread.sleep(1000);
             log.debug("Waiting for framework to start...");
         }
-        bundle.getServerStatus().markStarted();
         bundle.registerHealthcheck(() -> status);
     }
 
     @Test
     public void testDiscovery() throws Exception {
         Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
-        System.out.println(environment.getObjectMapper().writeValueAsString(info));
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
         assertEquals("CustomHost", info.get().getHost());
