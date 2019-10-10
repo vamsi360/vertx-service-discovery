@@ -135,8 +135,8 @@ public class ServiceDiscoveryBundleCustomHostPortTest {
         while (!started.get()) {
             Thread.sleep(1000);
             log.debug("Waiting for framework to start...");
-            bundle.getServerStatus().markStarted();
         }
+        bundle.getServerStatus().markStarted();
         bundle.registerHealthcheck(() -> status);
     }
 

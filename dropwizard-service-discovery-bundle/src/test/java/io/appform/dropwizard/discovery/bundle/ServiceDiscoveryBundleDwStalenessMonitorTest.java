@@ -148,12 +148,7 @@ public class ServiceDiscoveryBundleDwStalenessMonitorTest {
         while (!started.get()) {
             Thread.sleep(1000);
             log.debug("Waiting for framework to start...");
-            bundle.getServerStatus().markStarted();
-            for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()) {
-                lifeCycle.start();
-            }
         }
-
         bundle.getServerStatus().markStarted();
         bundle.registerHealthcheck(() -> status);
     }
