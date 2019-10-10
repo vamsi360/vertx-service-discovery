@@ -23,7 +23,6 @@ import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthservice.TimeEntity;
 import com.flipkart.ranger.healthservice.monitor.IsolatedHealthMonitor;
 import com.flipkart.ranger.serviceprovider.ServiceProvider;
-import com.flipkart.ranger.serviceprovider.ServiceProviderBuilder;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -35,7 +34,9 @@ import io.appform.dropwizard.discovery.bundle.id.IdGenerator;
 import io.appform.dropwizard.discovery.bundle.id.NodeIdManager;
 import io.appform.dropwizard.discovery.bundle.id.constraints.IdValidationConstraint;
 import io.appform.dropwizard.discovery.bundle.monitors.DropwizardHealthMonitor;
+import io.appform.dropwizard.discovery.bundle.monitors.DropwizardServerStartupCheck;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.BIRTask;
+import io.appform.dropwizard.discovery.bundle.rotationstatus.DropwizardServerStatus;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.OORTask;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.appform.dropwizard.discovery.client.ServiceDiscoveryClient;
@@ -67,7 +68,6 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private List<Healthcheck> healthchecks = Lists.newArrayList();
     private ServiceProvider<ShardInfo> serviceProvider;
-
     private final List<IdValidationConstraint> globalIdConstraints;
 
     @Getter
@@ -80,14 +80,18 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
     @VisibleForTesting
     private RotationStatus rotationStatus;
 
+    @Getter
+    @VisibleForTesting
+    private DropwizardServerStatus serverStatus;
+
     protected ServiceDiscoveryBundle() {
         globalIdConstraints = Collections.emptyList();
     }
 
     protected ServiceDiscoveryBundle(List<IdValidationConstraint> globalIdConstraints) {
         this.globalIdConstraints = globalIdConstraints != null
-                                   ? globalIdConstraints
-                                   : Collections.emptyList();
+                ? globalIdConstraints
+                : Collections.emptyList();
     }
 
     @Override
@@ -104,6 +108,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
         final String hostname = getHost();
         final int port = getPort(configuration);
         rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
+        serverStatus = new DropwizardServerStatus(false);
 
         curator = CuratorFrameworkFactory.builder()
                 .connectString(serviceDiscoveryConfiguration.getZookeeper())
@@ -195,14 +200,14 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .environment(serviceDiscoveryConfiguration.getEnvironment())
                 .build();
         val initialDelayForMonitor = serviceDiscoveryConfiguration.getInitialDelaySeconds() > 1
-                                            ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
-                                            : 0;
+                ? serviceDiscoveryConfiguration.getInitialDelaySeconds() - 1
+                : 0;
         val dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
-                                          ? Constants.DEFAULT_DW_CHECK_INTERVAl
-                                          : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
+                ? Constants.DEFAULT_DW_CHECK_INTERVAl
+                : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
         val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
-                                           ? dwMonitoringInterval + 1
-                                           : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
+                ? dwMonitoringInterval + 1
+                : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
         val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
                 .withCuratorFramework(curator)
                 .withNamespace(namespace)
@@ -222,6 +227,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withHealthcheck(new InternalHealthChecker(healthchecks))
                 .withHealthcheck(new RotationCheck(rotationStatus))
                 .withHealthcheck(new InitialDelayChecker(serviceDiscoveryConfiguration.getInitialDelaySeconds()))
+                .withHealthcheck(new DropwizardServerStartupCheck(environment, serverStatus))
                 .withIsolatedHealthMonitor(
                         new DropwizardHealthMonitor(
                                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
@@ -257,6 +263,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             serviceDiscoveryClient.stop();
             serviceProvider.stop();
             curator.close();
+            IdGenerator.cleanUp();
         }
     }
 }

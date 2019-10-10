@@ -17,6 +17,8 @@
 
 package io.appform.dropwizard.discovery.bundle;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
@@ -34,9 +36,13 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
+import org.eclipse.jetty.util.component.LifeCycle;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,6 +63,11 @@ public class ServiceDiscoveryBundleRotationTest {
     private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
     private final Configuration configuration = mock(Configuration.class);
 
+    static {
+        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.setLevel(Level.INFO);
+    }
+
 
     private final ServiceDiscoveryBundle<Configuration> bundle = new ServiceDiscoveryBundle<Configuration>() {
         @Override
@@ -73,11 +84,6 @@ public class ServiceDiscoveryBundleRotationTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
-    private HealthcheckStatus status = HealthcheckStatus.healthy;
-
     private RotationStatus rotationStatus;
 
     @Before
@@ -104,38 +110,30 @@ public class ServiceDiscoveryBundleRotationTest {
                                     .initialRotationStatus(true)
                                     .build();
         bundle.initialize(bootstrap);
-
         bundle.run(configuration, environment);
         rotationStatus = bundle.getRotationStatus();
-
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        bundle.getServerStatus().markStarted();
+        for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.start();
         }
+    }
 
+    @After
+    public void tearDown() throws Exception {
+        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.stop();
+        }
+        testingCluster.stop();
     }
 
     @Test
     public void testDiscovery() throws Exception {
         Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
-        System.out.println(environment.getObjectMapper().writeValueAsString(info));
-        Thread.sleep(5000);
+        Thread.sleep(1000);
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
         assertEquals("TestHost", info.get().getHost());
         assertEquals(8021, info.get().getPort());
-
-
-        //status = HealthcheckStatus.unhealthy;
 
         OORTask oorTask = new OORTask(rotationStatus);
         oorTask.execute(null, null);
@@ -150,6 +148,5 @@ public class ServiceDiscoveryBundleRotationTest {
 
         info = bundle.getServiceDiscoveryClient().getNode();
         assertTrue(info.isPresent());
-
     }
 }

@@ -64,6 +64,7 @@ public class ServiceDiscoveryConfiguration {
 
     @Min(0)
     @Max(600)
+    @Deprecated
     private long initialDelaySeconds;
 
     private boolean initialRotationStatus = true;
