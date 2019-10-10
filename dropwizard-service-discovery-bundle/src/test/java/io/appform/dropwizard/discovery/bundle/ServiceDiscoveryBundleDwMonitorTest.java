@@ -42,6 +42,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
@@ -90,7 +93,8 @@ public class ServiceDiscoveryBundleDwMonitorTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-    private HealthcheckStatus status = HealthcheckStatus.healthy;
+    private final HealthcheckStatus status = HealthcheckStatus.healthy;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @Before
     public void setup() throws Exception {
@@ -99,7 +103,9 @@ public class ServiceDiscoveryBundleDwMonitorTest {
 
             @Override
             protected Result check() throws Exception {
-                return counter.decrementAndGet() < 0 ? Result.unhealthy("unhealthy") : Result.healthy();
+                Result result = counter.decrementAndGet() < 0 ? Result.unhealthy("unhealthy") : Result.healthy();
+                log.info("Marking node as {}", result.getMessage());
+                return result;
             }
         });
 
@@ -127,16 +133,27 @@ public class ServiceDiscoveryBundleDwMonitorTest {
                                                                      .build();
         bundle.initialize(bootstrap);
         bundle.run(configuration, environment);
-        bundle.getServerStatus().markStarted();
-        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
-            lifeCycle.start();
-        }
-        bundle.registerHealthcheck(() -> status);
-    }
 
-    @After
-    public void tearDown() throws IOException {
-        testingCluster.stop();
+        final AtomicBoolean started = new AtomicBoolean(false);
+        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
+            try {
+                object.start();
+                started.set(true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }));
+        while (!started.get()) {
+            Thread.sleep(1000);
+            log.debug("Waiting for framework to start...");
+            bundle.getServerStatus().markStarted();
+            for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()) {
+                lifeCycle.start();
+            }
+        }
+
+        bundle.getServerStatus().markStarted();
+        bundle.registerHealthcheck(() -> status);
     }
 
     @Test

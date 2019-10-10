@@ -215,7 +215,8 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
                 .withSerializer(data -> {
                     try {
                         return objectMapper.writeValueAsBytes(data);
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         log.warn("Could not parse node data", e);
                     }
                     return null;

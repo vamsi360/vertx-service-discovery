@@ -17,6 +17,8 @@
 
 package io.appform.dropwizard.discovery.bundle;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
@@ -38,6 +40,7 @@ import org.eclipse.jetty.util.component.LifeCycle;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -60,6 +63,11 @@ public class ServiceDiscoveryBundleRotationTest {
     private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
     private final Configuration configuration = mock(Configuration.class);
 
+    static {
+        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.setLevel(Level.INFO);
+    }
+
 
     private final ServiceDiscoveryBundle<Configuration> bundle = new ServiceDiscoveryBundle<Configuration>() {
         @Override
@@ -76,6 +84,9 @@ public class ServiceDiscoveryBundleRotationTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
+
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     private RotationStatus rotationStatus;
 
     @Before
@@ -103,16 +114,24 @@ public class ServiceDiscoveryBundleRotationTest {
                                     .build();
         bundle.initialize(bootstrap);
         bundle.run(configuration, environment);
-        bundle.getServerStatus().markStarted();
-        rotationStatus = bundle.getRotationStatus();
-        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
-            lifeCycle.start();
+        final AtomicBoolean started = new AtomicBoolean(false);
+        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
+            try {
+                object.start();
+                started.set(true);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }));
+        while (!started.get()) {
+            Thread.sleep(1000);
+            log.debug("Waiting for framework to start...");
+            bundle.getServerStatus().markStarted();
+            for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()) {
+                lifeCycle.start();
+            }
         }
-    }
-
-    @After
-    public void tearDown() throws IOException {
-        testingCluster.stop();
+        bundle.getServerStatus().markStarted();
     }
 
     @Test
