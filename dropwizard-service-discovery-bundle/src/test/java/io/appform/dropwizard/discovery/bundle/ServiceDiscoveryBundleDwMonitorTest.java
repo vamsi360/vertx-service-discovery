@@ -94,17 +94,15 @@ public class ServiceDiscoveryBundleDwMonitorTest {
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
     private final HealthcheckStatus status = HealthcheckStatus.healthy;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @Before
     public void setup() throws Exception {
         healthChecks.register("twice-healthy-only", new HealthCheck() {
             private AtomicInteger counter = new AtomicInteger(2);
-
             @Override
             protected Result check() throws Exception {
-                Result result = counter.decrementAndGet() < 0 ? Result.unhealthy("unhealthy") : Result.healthy();
-                log.info("Marking node as {}", result.getMessage());
+                Result result = (counter.decrementAndGet() < 0) ? Result.unhealthy("unhealthy") : Result.healthy();
+                log.info("Marking node as {}", result.isHealthy());
                 return result;
             }
         });
@@ -134,25 +132,24 @@ public class ServiceDiscoveryBundleDwMonitorTest {
         bundle.initialize(bootstrap);
         bundle.run(configuration, environment);
         bundle.getServerStatus().markStarted();
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.start();
         }
         bundle.registerHealthcheck(() -> status);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.stop();
+        }
+        testingCluster.stop();
     }
 
     @Test
     public void testDiscovery() throws Exception {
         Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+        Thread.sleep(1000);
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
         assertEquals("CustomHost", info.get().getHost());

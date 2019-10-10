@@ -84,9 +84,6 @@ public class ServiceDiscoveryBundleRotationTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
     private RotationStatus rotationStatus;
 
     @Before
@@ -116,25 +113,23 @@ public class ServiceDiscoveryBundleRotationTest {
         bundle.run(configuration, environment);
         rotationStatus = bundle.getRotationStatus();
         bundle.getServerStatus().markStarted();
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.start();
         }
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.stop();
+        }
+        testingCluster.stop();
     }
 
     @Test
     public void testDiscovery() throws Exception {
         Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
-        Thread.sleep(5000);
+        Thread.sleep(1000);
         assertTrue(info.isPresent());
         assertEquals("testing", info.get().getNodeData().getEnvironment());
         assertEquals("TestHost", info.get().getHost());
@@ -153,6 +148,5 @@ public class ServiceDiscoveryBundleRotationTest {
 
         info = bundle.getServiceDiscoveryClient().getNode();
         assertTrue(info.isPresent());
-
     }
 }

@@ -263,6 +263,7 @@ public abstract class ServiceDiscoveryBundle<T extends Configuration> implements
             serviceDiscoveryClient.stop();
             serviceProvider.stop();
             curator.close();
+            IdGenerator.cleanUp();
         }
     }
 }

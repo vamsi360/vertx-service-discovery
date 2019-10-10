@@ -83,9 +83,6 @@ public class ServiceDiscoveryBundleTest {
 
     private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
     private final TestingCluster testingCluster = new TestingCluster(1);
-
-    private ExecutorService executorService = Executors.newSingleThreadExecutor();
-
     private HealthcheckStatus status = HealthcheckStatus.healthy;
 
     @Before
@@ -114,20 +111,18 @@ public class ServiceDiscoveryBundleTest {
         bundle.initialize(bootstrap);
         bundle.run(configuration, environment);
         bundle.getServerStatus().markStarted();
-        final AtomicBoolean started = new AtomicBoolean(false);
-        executorService.submit(() -> lifecycleEnvironment.getManagedObjects().forEach(object -> {
-            try {
-                object.start();
-                started.set(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }));
-        while (!started.get()) {
-            Thread.sleep(1000);
-            log.debug("Waiting for framework to start...");
+        for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.start();
         }
         bundle.registerHealthcheck(() -> status);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
+            lifeCycle.stop();
+        }
+        testingCluster.stop();
     }
 
     @Test
