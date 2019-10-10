@@ -34,9 +34,11 @@ import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -105,6 +107,11 @@ public class ServiceDiscoveryBundleTest {
             lifeCycle.start();
         }
         bundle.registerHealthcheck(() -> status);
+    }
+
+    @After
+    public void tearDown() throws IOException {
+        testingCluster.stop();
     }
 
     @Test
