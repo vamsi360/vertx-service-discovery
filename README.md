@@ -1,4 +1,4 @@
-# Dropwizard Service Discovery [![Travis build status](https://travis-ci.org/santanusinha/dropwizard-service-discovery.svg?branch=master)](https://travis-ci.org/santanusinha/dropwizard-service-discovery)
+# Vertx Service Discovery [![Travis build status](https://travis-ci.org/santanusinha/vertx-service-discovery.svg?branch=master)](https://travis-ci.org/santanusinha/vertx-service-discovery)
 
 Provides service discovery to dropwizard services. It uses [Ranger](https://github.com/flipkart-incubator/ranger) for service discovery.
 
@@ -6,7 +6,7 @@ Provides service discovery to dropwizard services. It uses [Ranger](https://gith
 ```
 <dependency>
     <groupId>io.appform.dropwizard.discovery</groupId>
-    <artifactId>dropwizard-service-discovery-bundle</artifactId>
+    <artifactId>vertx-service-discovery-bundle</artifactId>
     <version>1.3.13-2</version>
 </dependency>
 ```
@@ -15,7 +15,7 @@ Provides service discovery to dropwizard services. It uses [Ranger](https://gith
 ```
 <dependency>
     <groupId>io.appform.dropwizard.discovery</groupId>
-    <artifactId>dropwizard-service-discovery-client</artifactId>
+    <artifactId>vertx-service-discovery-client</artifactId>
     <version>1.3.13-1</version>
 </dependency>
 ```
