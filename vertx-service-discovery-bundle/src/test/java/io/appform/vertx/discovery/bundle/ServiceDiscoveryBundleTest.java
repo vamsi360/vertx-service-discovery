@@ -29,7 +29,9 @@ import io.appform.vertx.discovery.client.ServiceDiscoveryClient;
 import io.appform.vertx.discovery.common.ShardInfo;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.HealthChecks;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.WebClient;
 import java.io.IOException;
@@ -37,6 +39,7 @@ import java.net.UnknownHostException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
@@ -69,6 +72,8 @@ public class ServiceDiscoveryBundleTest {
   private String discoveryEnv = "testing";
   private String publishedHost = "TestHost";
 
+  private AtomicBoolean appHealthy = new AtomicBoolean(true);
+
   @Before
   public void setup() throws Exception {
     testingCluster.start();
@@ -84,7 +89,6 @@ public class ServiceDiscoveryBundleTest {
         .checkInterval(2)
         //.checkStaleness(6)
         .build();
-    bundle.initialize();
   }
 
   private void run(Healthcheck healthcheck) throws UnknownHostException, InterruptedException {
@@ -92,6 +96,30 @@ public class ServiceDiscoveryBundleTest {
     HealthChecks healthChecks = HealthChecks.create(vertx);
     Router router = Router.router(vertx);
     bundle.registerHealthcheck(healthcheck);
+
+    healthChecks.register("main-app", statusPromise -> {
+      if (appHealthy.get()) {
+        statusPromise.complete(Status.OK());
+      } else {
+        statusPromise.complete(Status.KO());
+      }
+    });
+
+    HealthCheckHandler healthCheckHandler = HealthCheckHandler.createWithHealthChecks(healthChecks);
+    router.get("/healthcheck").handler(healthCheckHandler);
+
+    router.post("/tasks/oor").handler(routingContext -> {
+      log.info("Taking App OOR by failing main health check");
+      appHealthy.set(false);
+      routingContext.response().setStatusCode(200).end("Took OOR..");
+    });
+
+    router.post("/tasks/bir").handler(routingContext -> {
+      log.info("Taking App BIR by activating main health check");
+      appHealthy.set(true);
+      routingContext.response().setStatusCode(200).end("Took OOR..");
+    });
+
     bundle.run(new ObjectMapper(), vertx, healthChecks, router);
     httpServer = vertx.createHttpServer();
     httpServer.requestHandler(router)
@@ -114,12 +142,10 @@ public class ServiceDiscoveryBundleTest {
     ServiceDiscoveryClient serviceDiscoveryClient = bundle.getServiceDiscoveryClient();
     Optional<ServiceNode<ShardInfo>> info = serviceDiscoveryClient.getNode();
     assertTrue(info.isPresent());
-    assertEquals(discoveryEnv, info.get().getNodeData().getEnvironment());
-    assertEquals(publishedHost, info.get().getHost());
-    assertEquals(8021, info.get().getPort());
+    validateNode(info.get());
     status = HealthcheckStatus.unhealthy;
 
-    Thread.sleep(10000);
+    Thread.sleep(5000);
     info = serviceDiscoveryClient.getNode();
     assertFalse(info.isPresent());
   }
@@ -138,15 +164,21 @@ public class ServiceDiscoveryBundleTest {
     Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
     Thread.sleep(1000);
     assertTrue(info.isPresent());
-    assertEquals(discoveryEnv, info.get().getNodeData().getEnvironment());
-    assertEquals(publishedHost, info.get().getHost());
-    assertEquals(8021, info.get().getPort());
-
-    /* after 2 turns, the healthcheck will return unhealthy, and since checkInterval
-       is 2 seconds, within 2*2=4 seconds, nodes should be absent */
-    Thread.sleep(11000);
+    ServiceNode<ShardInfo> shardInfoServiceNode = info.get();
+    validateNode(shardInfoServiceNode);
+    /*
+     * after 2 turns, the health check will return unhealthy, and since checkInterval
+     * is 2 seconds, within 2*2=4 seconds, nodes should be absent
+     */
+    Thread.sleep(4000);
     info = bundle.getServiceDiscoveryClient().getNode();
     assertFalse(info.isPresent());
+  }
+
+  private void validateNode(ServiceNode<ShardInfo> shardInfoServiceNode) {
+    assertEquals(discoveryEnv, shardInfoServiceNode.getNodeData().getEnvironment());
+    assertEquals(publishedHost, shardInfoServiceNode.getHost());
+    assertEquals(8021, shardInfoServiceNode.getPort());
   }
 
   @Test
@@ -170,9 +202,7 @@ public class ServiceDiscoveryBundleTest {
 
     Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
     assertTrue(info.isPresent());
-    assertEquals(discoveryEnv, info.get().getNodeData().getEnvironment());
-    assertEquals(publishedHost, info.get().getHost());
-    assertEquals(8021, info.get().getPort());
+    validateNode(info.get());
 
         /* since healtcheck is sleeping for 5secs, the staleness allowed is 2+1=3 seconds, node should vanish after
            3 seconds */
@@ -184,24 +214,39 @@ public class ServiceDiscoveryBundleTest {
   }
 
   @Test
-  public void testDiscoveryBundleOORAndBIR() throws InterruptedException, UnknownHostException {
+  public void testDiscoveryBundleOORAndBIRWhenRangerHealthIsToggled()
+      throws InterruptedException, UnknownHostException {
     run(() -> status);
 
+    String oorUri = "/tasks/ranger-oor";
+    String birUri = "/tasks/ranger-bir";
+    makeOorThenBirValidatingRanger(oorUri, birUri);
+  }
+
+  @Test
+  public void testDiscoveryBundleOORAndBIRWhenAppHealthIsToggled() throws InterruptedException, UnknownHostException {
+    run(() -> status);
+
+    String oorUri = "/tasks/oor";
+    String birUri = "/tasks/bir";
+    makeOorThenBirValidatingRanger(oorUri, birUri);
+  }
+
+  private void makeOorThenBirValidatingRanger(String oorUri, String birUri) throws InterruptedException {
     Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
     Thread.sleep(1000);
     assertTrue(info.isPresent());
-    assertEquals(discoveryEnv, info.get().getNodeData().getEnvironment());
-    assertEquals(publishedHost, info.get().getHost());
-    assertEquals(8021, info.get().getPort());
+    validateNode(info.get());
 
     CountDownLatch latch = new CountDownLatch(2);
     AtomicInteger errors = new AtomicInteger();
 
     WebClient webClient = WebClient.create(vertx);
-    webClient.post(vertxPort, "localhost", "/tasks/ranger-oor").send(result -> {
+
+    webClient.post(vertxPort, "localhost", oorUri).send(result -> {
       log.info("Triggered App OOR");
       try {
-        Thread.sleep(10000);
+        Thread.sleep(4000);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         errors.incrementAndGet();
@@ -217,10 +262,10 @@ public class ServiceDiscoveryBundleTest {
         latch.countDown();
       }
 
-      webClient.post(vertxPort, "localhost", "/tasks/ranger-bir").send(birResult -> {
+      webClient.post(vertxPort, "localhost", birUri).send(birResult -> {
         log.info("Triggered App BIR");
         try {
-          Thread.sleep(10000);
+          Thread.sleep(4000);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           errors.incrementAndGet();

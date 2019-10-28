@@ -93,9 +93,6 @@ public abstract class ServiceDiscoveryBundle {
         : Collections.emptyList();
   }
 
-  public void initialize() {
-  }
-
   public void run(ObjectMapper objectMapper,
       Vertx vertx,
       HealthChecks healthChecks,
