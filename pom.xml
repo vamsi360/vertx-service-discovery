@@ -139,12 +139,6 @@
       <version>${lombok.version}</version>
       <scope>provided</scope>
     </dependency>
-    <!--        <dependency>-->
-    <!--            <groupId>io.dropwizard</groupId>-->
-    <!--            <artifactId>dropwizard-core</artifactId>-->
-    <!--            <version>${dropwizard.version}</version>-->
-    <!--            <scope>provided</scope>-->
-    <!--        </dependency>-->
 
     <dependency>
       <groupId>io.vertx</groupId>
@@ -198,12 +192,13 @@
       <scope>test</scope>
     </dependency>
 
-    <!--        <dependency>-->
-    <!--            <groupId>io.dropwizard</groupId>-->
-    <!--            <artifactId>dropwizard-testing</artifactId>-->
-    <!--            <version>${dropwizard.version}</version>-->
-    <!--            <scope>test</scope>-->
-    <!--        </dependency>-->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.3</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

@@ -49,6 +49,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -98,7 +99,7 @@ public abstract class ServiceDiscoveryBundle {
   public void run(ObjectMapper objectMapper,
       Vertx vertx,
       HealthChecks healthChecks,
-      Router router) throws UnknownHostException {
+      Router router) throws UnknownHostException, InterruptedException {
     serviceDiscoveryConfiguration = getRangerConfiguration();
     final String namespace = serviceDiscoveryConfiguration.getNamespace();
     final String serviceName = getServiceName();
@@ -125,12 +126,15 @@ public abstract class ServiceDiscoveryBundle {
         namespace,
         serviceName);
 
-    vertx.deployVerticle(new ServiceDiscoveryVerticle(serviceName));
+    CountDownLatch startupLatch = new CountDownLatch(2);
+
+    vertx.deployVerticle(new ServiceDiscoveryVerticle(serviceName, startupLatch));
     vertx.deployVerticle(new AbstractVerticle() {
       @Override
       public void start() {
         log.info("Marking app as started..");
         serverStatus.markStarted();
+        startupLatch.countDown();
       }
 
       @Override
@@ -158,6 +162,9 @@ public abstract class ServiceDiscoveryBundle {
       log.info("Taking App BIR on Ranger");
       rotationStatus.bir();
     });
+
+    log.info("Awaiting on startupLatch..");
+    startupLatch.await();
   }
 
   protected abstract ServiceDiscoveryConfiguration getRangerConfiguration();
@@ -264,9 +271,11 @@ public abstract class ServiceDiscoveryBundle {
   private class ServiceDiscoveryVerticle extends AbstractVerticle {
 
     private final String serviceName;
+    private final CountDownLatch startupLatch;
 
-    public ServiceDiscoveryVerticle(String serviceName) {
+    public ServiceDiscoveryVerticle(String serviceName, CountDownLatch startupLatch) {
       this.serviceName = serviceName;
+      this.startupLatch = startupLatch;
     }
 
     @Override
@@ -276,6 +285,8 @@ public abstract class ServiceDiscoveryBundle {
       serviceDiscoveryClient.start();
       NodeIdManager nodeIdManager = new NodeIdManager(curator, serviceName);
       IdGenerator.initialize(nodeIdManager.fixNodeId(), globalIdConstraints, Collections.emptyMap());
+
+      startupLatch.countDown();
     }
 
     @Override

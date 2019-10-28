@@ -20,6 +20,7 @@ package io.appform.dropwizard.discovery.bundle.monitors;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.healthservice.TimeEntity;
 import com.flipkart.ranger.healthservice.monitor.IsolatedHealthMonitor;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.healthchecks.HealthChecks;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -41,13 +42,14 @@ public class VertxHealthMonitor extends IsolatedHealthMonitor<HealthcheckStatus>
   public HealthcheckStatus monitor() {
     final AtomicReference<HealthcheckStatus> healthCheckStatusRef = new AtomicReference<>(HealthcheckStatus.unhealthy);
     healthChecks.invoke(entries -> {
-      if ("OK".equalsIgnoreCase(entries.getString("outcome"))) {
+      JsonArray checks = entries.getJsonArray("checks");
+      if ("UP".equalsIgnoreCase(entries.getString("outcome"))) {
         healthCheckStatusRef.set(HealthcheckStatus.healthy);
       } else {
         healthCheckStatusRef.set(HealthcheckStatus.unhealthy);
       }
+      log.info("HealthCheckStatus: {}; NoOfChecks: {}", healthCheckStatusRef.get(), checks.size());
     });
-    log.info("HealthCheckStatus: {}", healthCheckStatusRef.get());
     return healthCheckStatusRef.get();
   }
 }

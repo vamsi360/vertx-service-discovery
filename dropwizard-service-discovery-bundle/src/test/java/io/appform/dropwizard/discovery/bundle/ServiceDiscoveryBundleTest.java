@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.model.ServiceNode;
+import io.appform.dropwizard.discovery.client.ServiceDiscoveryClient;
 import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthChecks;
@@ -79,7 +80,7 @@ public class ServiceDiscoveryBundleTest {
 
     bundle.run(new ObjectMapper(), vertx, healthChecks, router);
     //bundle.getServerStatus().markStarted();
-    //bundle.registerHealthcheck(() -> status);
+    bundle.registerHealthcheck(() -> status);
   }
 
   @After
@@ -90,7 +91,8 @@ public class ServiceDiscoveryBundleTest {
 
   @Test
   public void testDiscovery() throws Exception {
-    Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+    ServiceDiscoveryClient serviceDiscoveryClient = bundle.getServiceDiscoveryClient();
+    Optional<ServiceNode<ShardInfo>> info = serviceDiscoveryClient.getNode();
     assertTrue(info.isPresent());
     assertEquals("testing", info.get().getNodeData().getEnvironment());
     assertEquals("TestHost", info.get().getHost());
@@ -98,7 +100,7 @@ public class ServiceDiscoveryBundleTest {
     status = HealthcheckStatus.unhealthy;
 
     Thread.sleep(10000);
-    info = bundle.getServiceDiscoveryClient().getNode();
+    info = serviceDiscoveryClient.getNode();
     assertFalse(info.isPresent());
   }
 

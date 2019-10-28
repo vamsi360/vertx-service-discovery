@@ -99,10 +99,12 @@ public class ServiceDiscoveryClient {
   }
 
   public void start() throws Exception {
+    log.info("== Starting ServiceDiscoveryClient ==");
     serviceFinder.start();
   }
 
   public void stop() throws Exception {
+    log.info("== Stopping ServiceDiscoveryClient ==");
     serviceFinder.stop();
   }
 
