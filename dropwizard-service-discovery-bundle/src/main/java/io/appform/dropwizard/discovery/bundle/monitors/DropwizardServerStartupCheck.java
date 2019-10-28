@@ -29,19 +29,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DropwizardServerStartupCheck implements Healthcheck {
 
-    private final DropwizardServerStatus serverStatus;
+  private final DropwizardServerStatus serverStatus;
 
-    public DropwizardServerStartupCheck(Environment environment,
-                                        DropwizardServerStatus serverStatus) {
-        this.serverStatus = serverStatus;
-        environment.lifecycle().addServerLifecycleListener(server -> {
-            log.info("Dropwizard server started. Marking healthcheck as healthy");
-            serverStatus.markStarted();
-        });
-    }
+  public DropwizardServerStartupCheck(Environment environment,
+      DropwizardServerStatus serverStatus) {
+    this.serverStatus = serverStatus;
+    environment.lifecycle().addServerLifecycleListener(server -> {
+      log.info("Dropwizard server started. Marking healthcheck as healthy");
+      serverStatus.markStarted();
+    });
+  }
 
-    @Override
-    public HealthcheckStatus check() {
-        return serverStatus.started() ? HealthcheckStatus.healthy : HealthcheckStatus.unhealthy;
-    }
+  @Override
+  public HealthcheckStatus check() {
+    return serverStatus.started() ? HealthcheckStatus.healthy : HealthcheckStatus.unhealthy;
+  }
 }

@@ -22,31 +22,39 @@ import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.healthservice.TimeEntity;
 import com.flipkart.ranger.healthservice.monitor.IsolatedHealthMonitor;
 import io.dropwizard.setup.Environment;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.healthchecks.HealthChecks;
 
 /**
  * This monitor calls dropwizard healthchecks every few secs.
  */
 public class DropwizardHealthMonitor extends IsolatedHealthMonitor<HealthcheckStatus> {
 
-    private final Environment environment;
+  private final HealthChecks healthChecks;
 
-    public DropwizardHealthMonitor(
-            TimeEntity runInterval,
-            long stalenessAllowedInMillis,
-            Environment environment) {
-        super("dropwizard-health-monitor", runInterval, stalenessAllowedInMillis);
-        this.environment = environment;
-    }
+  public DropwizardHealthMonitor(
+      TimeEntity runInterval,
+      long stalenessAllowedInMillis,
+      Environment environment) {
+    super("dropwizard-health-monitor", runInterval, stalenessAllowedInMillis);
+    this.environment = environment;
+  }
 
-    @Override
-    public HealthcheckStatus monitor() {
-        return (null != environment.healthChecks()
-                && environment.healthChecks()
-                .runHealthChecks()
-                .values()
-                .stream()
-                .allMatch(HealthCheck.Result::isHealthy))
-               ? HealthcheckStatus.healthy
-               : HealthcheckStatus.unhealthy;
-    }
+  @Override
+  public HealthcheckStatus monitor() {
+    healthChecks.invoke(new Handler<JsonObject>() {
+      @Override
+      public void handle(JsonObject entries) {
+      }
+    });
+    return (null != environment.healthChecks()
+        && environment.healthChecks()
+        .runHealthChecks()
+        .values()
+        .stream()
+        .allMatch(HealthCheck.Result::isHealthy))
+        ? HealthcheckStatus.healthy
+        : HealthcheckStatus.unhealthy;
+  }
 }
