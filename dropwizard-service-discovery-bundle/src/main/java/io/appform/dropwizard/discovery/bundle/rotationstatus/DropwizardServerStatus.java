@@ -24,21 +24,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class DropwizardServerStatus {
 
-    private AtomicBoolean serverStarted;
+  private AtomicBoolean serverStarted;
 
-    public DropwizardServerStatus(boolean initialStatus) {
-        serverStarted = new AtomicBoolean(initialStatus);
-    }
+  public DropwizardServerStatus(boolean initialStatus) {
+    serverStarted = new AtomicBoolean(initialStatus);
+  }
 
-    public void markStarted() {
-        serverStarted.set(true);
-    }
+  public void markStarted() {
+    serverStarted.set(true);
+  }
 
-    public void markStopped() {
-        serverStarted.set(false);
-    }
+  public void markStopped() {
+    serverStarted.set(false);
+  }
 
-    public boolean started() {
-        return serverStarted.get();
-    }
+  public boolean started() {
+    return serverStarted.get();
+  }
 }

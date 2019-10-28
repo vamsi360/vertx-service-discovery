@@ -20,24 +20,18 @@ package io.appform.dropwizard.discovery.bundle.monitors;
 import com.flipkart.ranger.healthcheck.Healthcheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.DropwizardServerStatus;
-import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * This healthcheck listens to server started event to mark service healthy on ranger.
  */
 @Slf4j
-public class DropwizardServerStartupCheck implements Healthcheck {
+public class VertxServerStartupCheck implements Healthcheck {
 
   private final DropwizardServerStatus serverStatus;
 
-  public DropwizardServerStartupCheck(Environment environment,
-      DropwizardServerStatus serverStatus) {
+  public VertxServerStartupCheck(DropwizardServerStatus serverStatus) {
     this.serverStatus = serverStatus;
-    environment.lifecycle().addServerLifecycleListener(server -> {
-      log.info("Dropwizard server started. Marking healthcheck as healthy");
-      serverStatus.markStarted();
-    });
   }
 
   @Override

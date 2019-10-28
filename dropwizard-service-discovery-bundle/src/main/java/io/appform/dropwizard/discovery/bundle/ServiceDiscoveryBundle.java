@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.ServiceProviderBuilders;
 import com.flipkart.ranger.healthcheck.Healthcheck;
-import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.healthservice.TimeEntity;
 import com.flipkart.ranger.healthservice.monitor.IsolatedHealthMonitor;
 import com.flipkart.ranger.serviceprovider.ServiceProvider;
@@ -35,8 +34,8 @@ import io.appform.dropwizard.discovery.bundle.healthchecks.RotationCheck;
 import io.appform.dropwizard.discovery.bundle.id.IdGenerator;
 import io.appform.dropwizard.discovery.bundle.id.NodeIdManager;
 import io.appform.dropwizard.discovery.bundle.id.constraints.IdValidationConstraint;
-import io.appform.dropwizard.discovery.bundle.monitors.DropwizardHealthMonitor;
-import io.appform.dropwizard.discovery.bundle.monitors.DropwizardServerStartupCheck;
+import io.appform.dropwizard.discovery.bundle.monitors.VertxHealthMonitor;
+import io.appform.dropwizard.discovery.bundle.monitors.VertxServerStartupCheck;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.DropwizardServerStatus;
 import io.appform.dropwizard.discovery.bundle.rotationstatus.RotationStatus;
 import io.appform.dropwizard.discovery.client.ServiceDiscoveryClient;
@@ -44,6 +43,7 @@ import io.appform.dropwizard.discovery.common.ShardInfo;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.web.Router;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -97,7 +97,10 @@ public abstract class ServiceDiscoveryBundle {
     this.vertx = vertx;
   }
 
-  public void run(ObjectMapper objectMapper, Router router) throws Exception {
+  public void run(ObjectMapper objectMapper,
+      Vertx vertx,
+      HealthChecks healthChecks,
+      Router router) throws Exception {
     serviceDiscoveryConfiguration = getRangerConfiguration();
     final String namespace = serviceDiscoveryConfiguration.getNamespace();
     final String serviceName = getServiceName();
@@ -113,6 +116,7 @@ public abstract class ServiceDiscoveryBundle {
         .build();
     serviceProvider = buildServiceProvider(
         objectMapper,
+        healthChecks,
         namespace,
         serviceName,
         hostname,
@@ -124,25 +128,38 @@ public abstract class ServiceDiscoveryBundle {
         serviceName);
 
     vertx.deployVerticle(new ServiceDiscoveryManager(serviceName));
+    vertx.deployVerticle(new AbstractVerticle() {
+      @Override
+      public void start() {
+        log.info("Marking app as started..");
+        serverStatus.markStarted();
+      }
+
+      @Override
+      public void stop() {
+        log.info("Marking app as stopped..");
+        serverStatus.markStopped();
+      }
+    });
     router.get("/instances").handler(routingContext -> {
-      byte[] bytes = new byte[0];
       try {
-        bytes = objectMapper.writeValueAsBytes(serviceDiscoveryClient.getAllNodes());
+        byte[] bytes = objectMapper.writeValueAsBytes(serviceDiscoveryClient.getAllNodes());
+        routingContext.response().setStatusCode(200).end(Buffer.buffer(bytes));
       } catch (JsonProcessingException e) {
         log.error("Exception in writing nodes", e);
         routingContext.fail(500, e);
       }
-      routingContext.response().setStatusCode(200).end(Buffer.buffer(bytes));
     });
 
-//    environment.lifecycle()
-//        .manage(new ServiceDiscoveryManager(serviceName));
-//    environment.jersey()
-//        .register(new InfoResource(serviceDiscoveryClient));
-//    environment.admin()
-//        .addTask(new OORTask(rotationStatus));
-//    environment.admin()
-//        .addTask(new BIRTask(rotationStatus));
+    router.post("/tasks/ranger-oor").handler(routingContext -> {
+      log.info("Taking App OOR on Ranger");
+      rotationStatus.oor();
+    });
+
+    router.post("/tasks/ranger-bir").handler(routingContext -> {
+      log.info("Taking App BIR on Ranger");
+      rotationStatus.bir();
+    });
   }
 
   protected abstract ServiceDiscoveryConfiguration getRangerConfiguration();
@@ -197,6 +214,7 @@ public abstract class ServiceDiscoveryBundle {
 
   private ServiceProvider<ShardInfo> buildServiceProvider(
       ObjectMapper objectMapper,
+      HealthChecks healthChecks,
       String namespace,
       String serviceName,
       String hostname,
@@ -210,9 +228,8 @@ public abstract class ServiceDiscoveryBundle {
     val dwMonitoringInterval = serviceDiscoveryConfiguration.getDropwizardCheckInterval() == 0
         ? Constants.DEFAULT_DW_CHECK_INTERVAl
         : serviceDiscoveryConfiguration.getDropwizardCheckInterval();
-    val dwMonitoringStaleness = serviceDiscoveryConfiguration.getDropwizardCheckStaleness() < dwMonitoringInterval + 1
-        ? dwMonitoringInterval + 1
-        : serviceDiscoveryConfiguration.getDropwizardCheckStaleness();
+    val dwMonitoringStaleness = Math
+        .max(serviceDiscoveryConfiguration.getDropwizardCheckStaleness(), dwMonitoringInterval + 1);
     val serviceProviderBuilder = ServiceProviderBuilders.<ShardInfo>shardedServiceProviderBuilder()
         .withCuratorFramework(curator)
         .withNamespace(namespace)
@@ -231,17 +248,11 @@ public abstract class ServiceDiscoveryBundle {
         .withHealthcheck(new InternalHealthChecker(healthchecks))
         .withHealthcheck(new RotationCheck(rotationStatus))
         .withHealthcheck(new InitialDelayChecker(serviceDiscoveryConfiguration.getInitialDelaySeconds()))
-        .withHealthcheck(new DropwizardServerStartupCheck(environment, serverStatus))
-        .withIsolatedHealthMonitor(new IsolatedHealthMonitor() {
-          @Override
-          public HealthcheckStatus monitor() {
-            return null;
-          }
-        })
+        .withHealthcheck(new VertxServerStartupCheck(serverStatus))
         .withIsolatedHealthMonitor(
-            new DropwizardHealthMonitor(
+            new VertxHealthMonitor(
                 new TimeEntity(initialDelayForMonitor, dwMonitoringInterval, TimeUnit.SECONDS),
-                dwMonitoringStaleness * 1_000, environment))
+                dwMonitoringStaleness * 1_000, healthChecks))
         .withHealthUpdateIntervalMs(serviceDiscoveryConfiguration.getRefreshTimeMs())
         .withStaleUpdateThresholdMs(10000);
 

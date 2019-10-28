@@ -17,44 +17,37 @@
 
 package io.appform.dropwizard.discovery.bundle.monitors;
 
-import com.codahale.metrics.health.HealthCheck;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.healthservice.TimeEntity;
 import com.flipkart.ranger.healthservice.monitor.IsolatedHealthMonitor;
-import io.dropwizard.setup.Environment;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthChecks;
+import java.util.concurrent.atomic.AtomicReference;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * This monitor calls dropwizard healthchecks every few secs.
- */
-public class DropwizardHealthMonitor extends IsolatedHealthMonitor<HealthcheckStatus> {
+@Slf4j
+public class VertxHealthMonitor extends IsolatedHealthMonitor<HealthcheckStatus> {
 
   private final HealthChecks healthChecks;
 
-  public DropwizardHealthMonitor(
+  public VertxHealthMonitor(
       TimeEntity runInterval,
       long stalenessAllowedInMillis,
-      Environment environment) {
-    super("dropwizard-health-monitor", runInterval, stalenessAllowedInMillis);
-    this.environment = environment;
+      HealthChecks healthChecks) {
+    super("vertx-health-monitor", runInterval, stalenessAllowedInMillis);
+    this.healthChecks = healthChecks;
   }
 
   @Override
   public HealthcheckStatus monitor() {
-    healthChecks.invoke(new Handler<JsonObject>() {
-      @Override
-      public void handle(JsonObject entries) {
+    final AtomicReference<HealthcheckStatus> healthCheckStatusRef = new AtomicReference<>(HealthcheckStatus.unhealthy);
+    healthChecks.invoke(entries -> {
+      if ("OK".equalsIgnoreCase(entries.getString("outcome"))) {
+        healthCheckStatusRef.set(HealthcheckStatus.healthy);
+      } else {
+        healthCheckStatusRef.set(HealthcheckStatus.unhealthy);
       }
     });
-    return (null != environment.healthChecks()
-        && environment.healthChecks()
-        .runHealthChecks()
-        .values()
-        .stream()
-        .allMatch(HealthCheck.Result::isHealthy))
-        ? HealthcheckStatus.healthy
-        : HealthcheckStatus.unhealthy;
+    log.info("HealthCheckStatus: {}", healthCheckStatusRef.get());
+    return healthCheckStatusRef.get();
   }
 }
