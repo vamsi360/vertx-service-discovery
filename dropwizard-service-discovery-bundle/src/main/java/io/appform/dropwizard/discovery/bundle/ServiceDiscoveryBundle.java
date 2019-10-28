@@ -81,7 +81,6 @@ public abstract class ServiceDiscoveryBundle {
   @Getter
   @VisibleForTesting
   private DropwizardServerStatus serverStatus;
-  private Vertx vertx;
 
   protected ServiceDiscoveryBundle() {
     globalIdConstraints = Collections.emptyList();
@@ -93,14 +92,13 @@ public abstract class ServiceDiscoveryBundle {
         : Collections.emptyList();
   }
 
-  public void initialize(Vertx vertx) {
-    this.vertx = vertx;
+  public void initialize() {
   }
 
   public void run(ObjectMapper objectMapper,
       Vertx vertx,
       HealthChecks healthChecks,
-      Router router) throws Exception {
+      Router router) throws UnknownHostException {
     serviceDiscoveryConfiguration = getRangerConfiguration();
     final String namespace = serviceDiscoveryConfiguration.getNamespace();
     final String serviceName = getServiceName();
@@ -127,7 +125,7 @@ public abstract class ServiceDiscoveryBundle {
         namespace,
         serviceName);
 
-    vertx.deployVerticle(new ServiceDiscoveryManager(serviceName));
+    vertx.deployVerticle(new ServiceDiscoveryVerticle(serviceName));
     vertx.deployVerticle(new AbstractVerticle() {
       @Override
       public void start() {
@@ -263,11 +261,11 @@ public abstract class ServiceDiscoveryBundle {
     return serviceProviderBuilder.buildServiceDiscovery();
   }
 
-  private class ServiceDiscoveryManager extends AbstractVerticle {
+  private class ServiceDiscoveryVerticle extends AbstractVerticle {
 
     private final String serviceName;
 
-    public ServiceDiscoveryManager(String serviceName) {
+    public ServiceDiscoveryVerticle(String serviceName) {
       this.serviceName = serviceName;
     }
 

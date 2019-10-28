@@ -18,12 +18,11 @@
 package io.appform.dropwizard.discovery.bundle;
 
 import com.google.common.base.Strings;
-import lombok.*;
-import org.hibernate.validator.constraints.NotEmpty;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * Ranger configuration.
@@ -33,81 +32,55 @@ import javax.validation.constraints.NotNull;
 @ToString
 @NoArgsConstructor
 public class ServiceDiscoveryConfiguration {
-    @NotNull
-    @NotEmpty
-    private String namespace = Constants.DEFAULT_NAMESPACE;
 
-    @NotNull
-    @NotEmpty
-    private String environment;
+  private String namespace = Constants.DEFAULT_NAMESPACE;
+  private String environment;
+  private String zookeeper;
+  private int connectionRetryIntervalMillis = Constants.DEFAULT_RETRY_CONN_INTERVAL;
+  private String publishedHost = Constants.DEFAULT_HOST;
+  private int publishedPort = Constants.DEFAULT_PORT;
+  private int refreshTimeMs;
+  private boolean disableWatchers;
+  private long initialDelaySeconds;
+  private boolean initialRotationStatus = true;
+  private int dropwizardCheckInterval = Constants.DEFAULT_DW_CHECK_INTERVAl;
+  private int dropwizardCheckStaleness;
 
-    @NotNull
-    @NotEmpty
-    private String zookeeper;
-
-    @Min(1000)
-    @Max(60000)
-    private int connectionRetryIntervalMillis = Constants.DEFAULT_RETRY_CONN_INTERVAL;
-
-    @NotNull
-    @NotEmpty
-    private String publishedHost = Constants.DEFAULT_HOST;
-
-    @NotNull
-    @Min(-1)
-    @Max(65535)
-    private int publishedPort = Constants.DEFAULT_PORT;
-
-    private int refreshTimeMs;
-
-    private boolean disableWatchers;
-
-    @Min(0)
-    @Max(600)
-    @Deprecated
-    private long initialDelaySeconds;
-
-    private boolean initialRotationStatus = true;
-
-    private int dropwizardCheckInterval = Constants.DEFAULT_DW_CHECK_INTERVAl;
-
-    private int dropwizardCheckStaleness;
-
-    @Builder
-    public ServiceDiscoveryConfiguration(
-            String namespace,
-            String environment,
-            String zookeeper,
-            int connectionRetryIntervalMillis,
-            String publishedHost,
-            int publishedPort,
-            int refreshTimeMs,
-            boolean disableWatchers,
-            long initialDelaySeconds,
-            boolean initialRotationStatus,
-            int dropwizardCheckInterval,
-            int dropwizardCheckStaleness) {
-        this.namespace = Strings.isNullOrEmpty(namespace)
-                         ? Constants.DEFAULT_NAMESPACE
-                         : namespace;
-        this.environment = environment;
-        this.zookeeper = zookeeper;
-        this.connectionRetryIntervalMillis = connectionRetryIntervalMillis == 0
-                                             ? Constants.DEFAULT_RETRY_CONN_INTERVAL
-                                             : connectionRetryIntervalMillis;
-        this.publishedHost = Strings.isNullOrEmpty(publishedHost)
-                             ? Constants.DEFAULT_HOST
-                             : publishedHost;
-        this.publishedPort = publishedPort == 0
-                             ? Constants.DEFAULT_PORT
-                             : publishedPort;
-        this.refreshTimeMs = refreshTimeMs;
-        this.disableWatchers = disableWatchers;
-        this.initialDelaySeconds = initialDelaySeconds;
-        this.initialRotationStatus = initialRotationStatus;
-        this.dropwizardCheckInterval = dropwizardCheckInterval == 0
-                                       ? Constants.DEFAULT_DW_CHECK_INTERVAl
-                                       : dropwizardCheckInterval;
-        this.dropwizardCheckStaleness = dropwizardCheckStaleness;
-    }
+  @Builder
+  public ServiceDiscoveryConfiguration(
+      String namespace,
+      String environment,
+      String zookeeper,
+      int connectionRetryIntervalMillis,
+      String publishedHost,
+      int publishedPort,
+      int refreshTimeMs,
+      boolean disableWatchers,
+      long initialDelaySeconds,
+      boolean initialRotationStatus,
+      int dropwizardCheckInterval,
+      int dropwizardCheckStaleness) {
+    this.namespace = Strings.isNullOrEmpty(namespace)
+        ? Constants.DEFAULT_NAMESPACE
+        : namespace;
+    this.environment = environment;
+    this.zookeeper = zookeeper;
+    this.connectionRetryIntervalMillis = connectionRetryIntervalMillis == 0
+        ? Constants.DEFAULT_RETRY_CONN_INTERVAL
+        : connectionRetryIntervalMillis;
+    this.publishedHost = Strings.isNullOrEmpty(publishedHost)
+        ? Constants.DEFAULT_HOST
+        : publishedHost;
+    this.publishedPort = publishedPort == 0
+        ? Constants.DEFAULT_PORT
+        : publishedPort;
+    this.refreshTimeMs = refreshTimeMs;
+    this.disableWatchers = disableWatchers;
+    this.initialDelaySeconds = initialDelaySeconds;
+    this.initialRotationStatus = initialRotationStatus;
+    this.dropwizardCheckInterval = dropwizardCheckInterval == 0
+        ? Constants.DEFAULT_DW_CHECK_INTERVAl
+        : dropwizardCheckInterval;
+    this.dropwizardCheckStaleness = dropwizardCheckStaleness;
+  }
 }

@@ -17,125 +17,159 @@
 
 package io.appform.dropwizard.discovery.bundle;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import com.codahale.metrics.health.HealthCheckRegistry;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.ranger.healthcheck.HealthcheckStatus;
 import com.flipkart.ranger.model.ServiceNode;
-import io.appform.dropwizard.discovery.bundle.ServiceDiscoveryBundle;
-import io.appform.dropwizard.discovery.bundle.ServiceDiscoveryConfiguration;
-import io.dropwizard.Configuration;
 import io.appform.dropwizard.discovery.common.ShardInfo;
-import io.dropwizard.jersey.DropwizardResourceConfig;
-import io.dropwizard.jersey.setup.JerseyEnvironment;
-import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
-import io.dropwizard.setup.AdminEnvironment;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
+import io.vertx.core.Vertx;
+import io.vertx.ext.healthchecks.HealthChecks;
+import io.vertx.ext.web.Router;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.test.TestingCluster;
-import org.eclipse.jetty.util.component.LifeCycle;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
 
 @Slf4j
 public class ServiceDiscoveryBundleTest {
 
-    private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
-    private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
-    private final LifecycleEnvironment lifecycleEnvironment = new LifecycleEnvironment();
-    private final Environment environment = mock(Environment.class);
-    private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
-    private final Configuration configuration = mock(Configuration.class);
-
-    static {
-        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        root.setLevel(Level.INFO);
+  private final ServiceDiscoveryBundle bundle = new ServiceDiscoveryBundle() {
+    @Override
+    protected ServiceDiscoveryConfiguration getRangerConfiguration() {
+      return serviceDiscoveryConfiguration;
     }
 
-
-    private final ServiceDiscoveryBundle<Configuration> bundle = new ServiceDiscoveryBundle<Configuration>() {
-        @Override
-        protected ServiceDiscoveryConfiguration getRangerConfiguration(Configuration configuration) {
-            return serviceDiscoveryConfiguration;
-        }
-
-        @Override
-        protected String getServiceName(Configuration configuration) {
-            return "TestService";
-        }
-
-    };
-
-    private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
-    private final TestingCluster testingCluster = new TestingCluster(1);
-    private HealthcheckStatus status = HealthcheckStatus.healthy;
-
-    @Before
-    public void setup() throws Exception {
-
-        when(jerseyEnvironment.getResourceConfig()).thenReturn(new DropwizardResourceConfig());
-        when(environment.jersey()).thenReturn(jerseyEnvironment);
-        when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
-        when(environment.healthChecks()).thenReturn(healthChecks);
-        when(environment.getObjectMapper()).thenReturn(new ObjectMapper());
-        AdminEnvironment adminEnvironment = mock(AdminEnvironment.class);
-        doNothing().when(adminEnvironment).addTask(any());
-        when(environment.admin()).thenReturn(adminEnvironment);
-
-        testingCluster.start();
-
-        serviceDiscoveryConfiguration = ServiceDiscoveryConfiguration.builder()
-                                    .zookeeper(testingCluster.getConnectString())
-                                    .namespace("test")
-                                    .environment("testing")
-                                    .connectionRetryIntervalMillis(5000)
-                                    .publishedHost("TestHost")
-                                    .publishedPort(8021)
-                                    .initialRotationStatus(true)
-                                    .build();
-        bundle.initialize(bootstrap);
-        bundle.run(configuration, environment);
-        bundle.getServerStatus().markStarted();
-        for (LifeCycle lifeCycle : lifecycleEnvironment.getManagedObjects()){
-            lifeCycle.start();
-        }
-        bundle.registerHealthcheck(() -> status);
+    @Override
+    protected String getServiceName() {
+      return "TestService";
     }
+  };
 
-    @After
-    public void tearDown() throws Exception {
-        for (LifeCycle lifeCycle: lifecycleEnvironment.getManagedObjects()){
-            lifeCycle.stop();
-        }
-        testingCluster.stop();
-    }
+  private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
+  private final TestingCluster testingCluster = new TestingCluster(1);
+  private HealthcheckStatus status = HealthcheckStatus.healthy;
 
-    @Test
-    public void testDiscovery() throws Exception {
-        Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
-        assertTrue(info.isPresent());
-        assertEquals("testing", info.get().getNodeData().getEnvironment());
-        assertEquals("TestHost", info.get().getHost());
-        assertEquals(8021, info.get().getPort());
-        status = HealthcheckStatus.unhealthy;
+  private Vertx vertx;
+  private HealthChecks healthChecks;
+  private Router router;
 
-        Thread.sleep(10000);
-        info = bundle.getServiceDiscoveryClient().getNode();
-        assertFalse(info.isPresent());
-    }
+  @Before
+  public void setup() throws Exception {
+    testingCluster.start();
+
+    vertx = Vertx.vertx();
+    healthChecks = HealthChecks.create(vertx);
+    router = Router.router(vertx);
+
+    serviceDiscoveryConfiguration = ServiceDiscoveryConfiguration.builder()
+        .zookeeper(testingCluster.getConnectString())
+        .namespace("test")
+        .environment("testing")
+        .connectionRetryIntervalMillis(5000)
+        .publishedHost("TestHost")
+        .publishedPort(8021)
+        .initialRotationStatus(true)
+        .build();
+    bundle.initialize();
+
+    bundle.run(new ObjectMapper(), vertx, healthChecks, router);
+    //bundle.getServerStatus().markStarted();
+    //bundle.registerHealthcheck(() -> status);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    vertx.close(event -> log.info("Tearing down Vertx.."));
+    testingCluster.stop();
+  }
+
+  @Test
+  public void testDiscovery() throws Exception {
+    Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+    assertTrue(info.isPresent());
+    assertEquals("testing", info.get().getNodeData().getEnvironment());
+    assertEquals("TestHost", info.get().getHost());
+    assertEquals(8021, info.get().getPort());
+    status = HealthcheckStatus.unhealthy;
+
+    Thread.sleep(10000);
+    info = bundle.getServiceDiscoveryClient().getNode();
+    assertFalse(info.isPresent());
+  }
+
+  @Test
+  public void testDiscoveryCustomHostPort() throws Exception {
+    Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+    assertTrue(info.isPresent());
+    assertEquals("testing", info.get().getNodeData().getEnvironment());
+    assertEquals("CustomHost", info.get().getHost());
+    assertEquals(21000, info.get().getPort());
+    status = HealthcheckStatus.unhealthy;
+
+    Thread.sleep(10000);
+    info = bundle.getServiceDiscoveryClient().getNode();
+    assertFalse(info.isPresent());
+  }
+
+  @Test
+  public void testDiscoveryMonitor() throws Exception {
+    Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+    Thread.sleep(1000);
+    assertTrue(info.isPresent());
+    assertEquals("testing", info.get().getNodeData().getEnvironment());
+    assertEquals("CustomHost", info.get().getHost());
+    assertEquals(21000, info.get().getPort());
+
+        /* after 2 turns, the healthcheck will return unhealthy, and since dropwizardCheckInterval
+           is 2 seconds, within 2*2=4 seconds, nodes should be absent */
+    Thread.sleep(11000);
+    info = bundle.getServiceDiscoveryClient().getNode();
+    assertFalse(info.isPresent());
+  }
+
+  @Test
+  public void testDiscoveryStaleness() throws Exception {
+    Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+    assertTrue(info.isPresent());
+    assertEquals("testing", info.get().getNodeData().getEnvironment());
+    assertEquals("CustomHost", info.get().getHost());
+    assertEquals(21000, info.get().getPort());
+
+        /* since healtcheck is sleeping for 5secs, the staleness allowed is 2+1=3 seconds, node should vanish after
+           3 seconds */
+    Thread.sleep(6000);
+    assertTrue(bundle.getServiceDiscoveryClient().getNode().isPresent());
+    Thread.sleep(6000);
+    info = bundle.getServiceDiscoveryClient().getNode();
+    assertFalse(info.isPresent());
+  }
+
+  @Test
+  public void testDiscoveryBundleOOR() throws Exception {
+    Optional<ServiceNode<ShardInfo>> info = bundle.getServiceDiscoveryClient().getNode();
+    Thread.sleep(1000);
+    assertTrue(info.isPresent());
+    assertEquals("testing", info.get().getNodeData().getEnvironment());
+    assertEquals("TestHost", info.get().getHost());
+    assertEquals(8021, info.get().getPort());
+
+//    OORTask oorTask = new OORTask(rotationStatus);
+//    oorTask.execute(null, null);
+
+    Thread.sleep(10000);
+    info = bundle.getServiceDiscoveryClient().getNode();
+    assertFalse(info.isPresent());
+
+//    BIRTask birTask = new BIRTask(rotationStatus);
+//    birTask.execute(null, null);
+    Thread.sleep(10000);
+
+    info = bundle.getServiceDiscoveryClient().getNode();
+    assertTrue(info.isPresent());
+  }
 }
