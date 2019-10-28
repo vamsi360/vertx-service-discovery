@@ -23,21 +23,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Current rotation status
  */
 public class RotationStatus {
-    private AtomicBoolean inRotation;
 
-    public RotationStatus(boolean initialStatus) {
-        inRotation = new AtomicBoolean(initialStatus);
-    }
+  private AtomicBoolean inRotation;
 
-    public void oor() {
-        inRotation.set(false);
-    }
+  public RotationStatus(boolean initialStatus) {
+    inRotation = new AtomicBoolean(initialStatus);
+  }
 
-    public void bir() {
-        inRotation.set(true);
-    }
+  public void oor() {
+    inRotation.set(false);
+  }
 
-    public boolean status() {
-        return inRotation.get();
-    }
+  public void bir() {
+    inRotation.set(true);
+  }
+
+  public boolean status() {
+    return inRotation.get();
+  }
 }

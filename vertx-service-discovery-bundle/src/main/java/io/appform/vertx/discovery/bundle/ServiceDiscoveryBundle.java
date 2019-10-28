@@ -36,8 +36,8 @@ import io.appform.vertx.discovery.bundle.id.NodeIdManager;
 import io.appform.vertx.discovery.bundle.id.constraints.IdValidationConstraint;
 import io.appform.vertx.discovery.bundle.monitors.VertxHealthMonitor;
 import io.appform.vertx.discovery.bundle.monitors.VertxServerStartupCheck;
-import io.appform.vertx.discovery.bundle.rotationstatus.ServerStatus;
 import io.appform.vertx.discovery.bundle.rotationstatus.RotationStatus;
+import io.appform.vertx.discovery.bundle.rotationstatus.ServerStatus;
 import io.appform.vertx.discovery.client.ServiceDiscoveryClient;
 import io.appform.vertx.discovery.common.ShardInfo;
 import io.vertx.core.AbstractVerticle;
@@ -156,11 +156,13 @@ public abstract class ServiceDiscoveryBundle {
     router.post("/tasks/ranger-oor").handler(routingContext -> {
       log.info("Taking App OOR on Ranger");
       rotationStatus.oor();
+      routingContext.response().setStatusCode(200).end("Took OOR..");
     });
 
     router.post("/tasks/ranger-bir").handler(routingContext -> {
       log.info("Taking App BIR on Ranger");
       rotationStatus.bir();
+      routingContext.response().setStatusCode(200).end("Took BIR..");
     });
 
     log.info("Awaiting on startupLatch..");
