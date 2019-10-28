@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>vertx-service-discovery</artifactId>
-        <groupId>io.appform.dropwizard.discovery</groupId>
-        <version>1.3.13-4</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>vertx-service-discovery</artifactId>
+    <groupId>io.appform.vertx.discovery</groupId>
+    <version>1.3.13-4</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>vertx-service-discovery-client</artifactId>
+  <artifactId>vertx-service-discovery-client</artifactId>
 
-    <dependencies>
-        <dependency>
-            <groupId>io.appform.dropwizard.discovery</groupId>
-            <artifactId>vertx-service-discovery-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
+  <dependencies>
+    <dependency>
+      <groupId>io.appform.vertx.discovery</groupId>
+      <artifactId>vertx-service-discovery-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
 
 </project>

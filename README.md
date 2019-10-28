@@ -1,11 +1,11 @@
 # Vertx Service Discovery [![Travis build status](https://travis-ci.org/santanusinha/vertx-service-discovery.svg?branch=master)](https://travis-ci.org/santanusinha/vertx-service-discovery)
 
-Provides service discovery to dropwizard services. It uses [Ranger](https://github.com/flipkart-incubator/ranger) for service discovery.
+Provides service discovery to vertx services. It uses [Ranger](https://github.com/flipkart-incubator/ranger) for service discovery.
 
 ## Dependency for bundle
 ```
 <dependency>
-    <groupId>io.appform.dropwizard.discovery</groupId>
+    <groupId>io.appform.vertx.discovery</groupId>
     <artifactId>vertx-service-discovery-bundle</artifactId>
     <version>1.3.13-2</version>
 </dependency>
@@ -14,7 +14,7 @@ Provides service discovery to dropwizard services. It uses [Ranger](https://gith
 ## Dependency for client
 ```
 <dependency>
-    <groupId>io.appform.dropwizard.discovery</groupId>
+    <groupId>io.appform.vertx.discovery</groupId>
     <artifactId>vertx-service-discovery-client</artifactId>
     <version>1.3.13-1</version>
 </dependency>
@@ -22,7 +22,7 @@ Provides service discovery to dropwizard services. It uses [Ranger](https://gith
 
 ## How to use the bundle
 
-You need to add an instance of type _ServiceDiscoveryConfiguration_ to your Dropwizard configuration file as follows:
+You need to add an instance of type _ServiceDiscoveryConfiguration_ to your Vertx configuration file as follows:
 
 ```
 public class AppConfiguration extends Configuration {
