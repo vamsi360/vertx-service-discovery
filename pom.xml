@@ -7,7 +7,7 @@
   <groupId>io.appform.vertx.discovery</groupId>
   <artifactId>vertx-service-discovery</artifactId>
   <packaging>pom</packaging>
-  <version>1.3.13-4</version>
+  <version>1.0-SNAPSHOT</version>
   <name>Vertx Service Discovery</name>
   <url>https://github.com/santanusinha/vertx-service-discovery</url>
   <description>Service Discovery Bundle for Vertx</description>

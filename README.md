@@ -7,7 +7,7 @@ Provides service discovery to vertx services. It uses [Ranger](https://github.co
 <dependency>
     <groupId>io.appform.vertx.discovery</groupId>
     <artifactId>vertx-service-discovery-bundle</artifactId>
-    <version>1.3.13-2</version>
+    <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -16,7 +16,7 @@ Provides service discovery to vertx services. It uses [Ranger](https://github.co
 <dependency>
     <groupId>io.appform.vertx.discovery</groupId>
     <artifactId>vertx-service-discovery-client</artifactId>
-    <version>1.3.13-1</version>
+    <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 
