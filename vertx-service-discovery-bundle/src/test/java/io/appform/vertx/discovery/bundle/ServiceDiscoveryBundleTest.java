@@ -50,18 +50,7 @@ import org.junit.Test;
 @Slf4j
 public class ServiceDiscoveryBundleTest {
 
-  private final ServiceDiscoveryBundle bundle = new ServiceDiscoveryBundle() {
-    @Override
-    protected ServiceDiscoveryConfiguration getRangerConfiguration() {
-      return serviceDiscoveryConfiguration;
-    }
-
-    @Override
-    protected String getServiceName() {
-      return "TestService";
-    }
-  };
-
+  private ServiceDiscoveryBundle bundle;
   private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
   private final TestingCluster testingCluster = new TestingCluster(1);
   private HealthcheckStatus status = HealthcheckStatus.healthy;
@@ -73,6 +62,8 @@ public class ServiceDiscoveryBundleTest {
   private String publishedHost = "TestHost";
 
   private AtomicBoolean appHealthy = new AtomicBoolean(true);
+  private Router router;
+  private HealthChecks healthChecks;
 
   @Before
   public void setup() throws Exception {
@@ -89,12 +80,15 @@ public class ServiceDiscoveryBundleTest {
         .checkInterval(2)
         //.checkStaleness(6)
         .build();
+    vertx = Vertx.vertx();
+    healthChecks = HealthChecks.create(vertx);
+    router = Router.router(vertx);
+
+    bundle = new ServiceDiscoveryBundle(new ObjectMapper(), vertx, healthChecks, router, "TestService",
+        serviceDiscoveryConfiguration);
   }
 
   private void run(Healthcheck healthcheck) throws UnknownHostException, InterruptedException {
-    vertx = Vertx.vertx();
-    HealthChecks healthChecks = HealthChecks.create(vertx);
-    Router router = Router.router(vertx);
     bundle.registerHealthcheck(healthcheck);
 
     healthChecks.register("main-app", statusPromise -> {
@@ -120,7 +114,7 @@ public class ServiceDiscoveryBundleTest {
       routingContext.response().setStatusCode(200).end("Took OOR..");
     });
 
-    bundle.run(new ObjectMapper(), vertx, healthChecks, router);
+    bundle.start();
     httpServer = vertx.createHttpServer();
     httpServer.requestHandler(router)
         .listen(vertxPort, "0.0.0.0", event -> {
@@ -130,6 +124,7 @@ public class ServiceDiscoveryBundleTest {
 
   @After
   public void tearDown() throws IOException {
+    bundle.close();
     httpServer.close(event -> log.info("Closing HttpServer.."));
     vertx.close(event -> log.info("Tearing down Vertx.."));
     testingCluster.stop();
@@ -151,7 +146,7 @@ public class ServiceDiscoveryBundleTest {
   }
 
   @Test
-  public void testDiscoveryMonitor() throws InterruptedException, UnknownHostException {
+  public void  testDiscoveryMonitor() throws InterruptedException, UnknownHostException {
     run(new Healthcheck() {
       private AtomicInteger counter = new AtomicInteger(2);
 

@@ -45,6 +45,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.web.Router;
+import java.io.Closeable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
@@ -62,10 +63,17 @@ import org.apache.curator.retry.RetryForever;
  * A vertx bundle for service discovery.
  */
 @Slf4j
-public abstract class ServiceDiscoveryBundle {
+public class ServiceDiscoveryBundle implements Closeable {
 
-  private ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
-  private List<Healthcheck> healthchecks = Lists.newArrayList();
+  private final ObjectMapper objectMapper;
+  private final Vertx vertx;
+  private final HealthChecks vertxHealthChecks;
+  private final Router router;
+
+  private final String serviceDiscoveryName;
+  private final ServiceDiscoveryConfiguration serviceDiscoveryConfiguration;
+
+  private List<Healthcheck> rangerHealthChecks = Lists.newArrayList();
   private ServiceProvider<ShardInfo> serviceProvider;
   private final List<IdValidationConstraint> globalIdConstraints;
 
@@ -83,25 +91,25 @@ public abstract class ServiceDiscoveryBundle {
   @VisibleForTesting
   private ServerStatus serverStatus;
 
-  protected ServiceDiscoveryBundle() {
+  public ServiceDiscoveryBundle(ObjectMapper objectMapper,
+      Vertx vertx,
+      HealthChecks vertxHealthChecks,
+      Router router,
+      String serviceDiscoveryName,
+      ServiceDiscoveryConfiguration serviceDiscoveryConfiguration) {
+    this.objectMapper = objectMapper;
+    this.vertx = vertx;
+    this.vertxHealthChecks = vertxHealthChecks;
+    this.router = router;
+    this.serviceDiscoveryName = serviceDiscoveryName;
+    this.serviceDiscoveryConfiguration = serviceDiscoveryConfiguration;
     globalIdConstraints = Collections.emptyList();
   }
 
-  protected ServiceDiscoveryBundle(List<IdValidationConstraint> globalIdConstraints) {
-    this.globalIdConstraints = globalIdConstraints != null
-        ? globalIdConstraints
-        : Collections.emptyList();
-  }
-
-  public void run(ObjectMapper objectMapper,
-      Vertx vertx,
-      HealthChecks healthChecks,
-      Router router) throws UnknownHostException, InterruptedException {
-    serviceDiscoveryConfiguration = getRangerConfiguration();
-    final String namespace = serviceDiscoveryConfiguration.getNamespace();
-    final String serviceName = getServiceName();
-    final String hostname = getHost();
-    final int port = getPort();
+  public void start() throws UnknownHostException, InterruptedException {
+    String namespace = serviceDiscoveryConfiguration.getNamespace();
+    String hostname = host();
+    int port = port();
     rotationStatus = new RotationStatus(serviceDiscoveryConfiguration.isInitialRotationStatus());
     serverStatus = new ServerStatus(false);
 
@@ -112,20 +120,20 @@ public abstract class ServiceDiscoveryBundle {
         .build();
     serviceProvider = buildServiceProvider(
         objectMapper,
-        healthChecks,
+        vertxHealthChecks,
         namespace,
-        serviceName,
+        serviceDiscoveryName,
         hostname,
         port
     );
     serviceDiscoveryClient = buildDiscoveryClient(
         objectMapper,
         namespace,
-        serviceName);
+        serviceDiscoveryName);
 
     CountDownLatch startupLatch = new CountDownLatch(2);
 
-    vertx.deployVerticle(new ServiceDiscoveryVerticle(serviceName, startupLatch));
+    vertx.deployVerticle(new ServiceDiscoveryVerticle(serviceDiscoveryName, startupLatch));
     vertx.deployVerticle(new AbstractVerticle() {
       @Override
       public void start() {
@@ -140,6 +148,7 @@ public abstract class ServiceDiscoveryBundle {
         serverStatus.markStopped();
       }
     });
+
     router.get("/instances").handler(routingContext -> {
       try {
         byte[] bytes = objectMapper.writeValueAsBytes(serviceDiscoveryClient.getAllNodes());
@@ -166,15 +175,15 @@ public abstract class ServiceDiscoveryBundle {
     startupLatch.await();
   }
 
-  protected abstract ServiceDiscoveryConfiguration getRangerConfiguration();
+  @Override
+  public void close() {
+  }
 
-  protected abstract String getServiceName();
-
-  protected List<IsolatedHealthMonitor> getHealthMonitors() {
+  public List<IsolatedHealthMonitor> getHealthMonitors() {
     return Lists.newArrayList();
   }
 
-  protected int getPort() {
+  private int port() {
     Preconditions.checkArgument(
         Constants.DEFAULT_PORT != serviceDiscoveryConfiguration.getPublishedPort()
             && 0 != serviceDiscoveryConfiguration.getPublishedPort(),
@@ -183,7 +192,7 @@ public abstract class ServiceDiscoveryBundle {
     return serviceDiscoveryConfiguration.getPublishedPort();
   }
 
-  protected String getHost() throws UnknownHostException {
+  private String host() throws UnknownHostException {
     final String host = serviceDiscoveryConfiguration.getPublishedHost();
 
     if (Strings.isNullOrEmpty(host) || host.equals(Constants.DEFAULT_HOST)) {
@@ -194,11 +203,11 @@ public abstract class ServiceDiscoveryBundle {
   }
 
   public void registerHealthcheck(Healthcheck healthcheck) {
-    this.healthchecks.add(healthcheck);
+    this.rangerHealthChecks.add(healthcheck);
   }
 
   public void registerHealthchecks(List<Healthcheck> healthchecks) {
-    this.healthchecks.addAll(healthchecks);
+    this.rangerHealthChecks.addAll(healthchecks);
   }
 
   private ServiceDiscoveryClient buildDiscoveryClient(
@@ -249,7 +258,7 @@ public abstract class ServiceDiscoveryBundle {
         .withHostname(hostname)
         .withPort(port)
         .withNodeData(nodeInfo)
-        .withHealthcheck(new InternalHealthChecker(healthchecks))
+        .withHealthcheck(new InternalHealthChecker(this.rangerHealthChecks))
         .withHealthcheck(new RotationCheck(rotationStatus))
         .withHealthcheck(new InitialDelayChecker(serviceDiscoveryConfiguration.getInitialDelaySeconds()))
         .withHealthcheck(new VertxServerStartupCheck(serverStatus))
@@ -291,7 +300,11 @@ public abstract class ServiceDiscoveryBundle {
     @Override
     public void stop() throws Exception {
       serviceDiscoveryClient.stop();
+
+      log.info("== Stopping ServiceProvider ==");
       serviceProvider.stop();
+
+      log.info("== Stopping Curator ==");
       curator.close();
       IdGenerator.cleanUp();
     }

@@ -42,14 +42,14 @@ public class VertxHealthMonitor extends IsolatedHealthMonitor<HealthcheckStatus>
   public HealthcheckStatus monitor() {
     final AtomicReference<HealthcheckStatus> healthCheckStatusRef = new AtomicReference<>(HealthcheckStatus.unhealthy);
     healthChecks.invoke(entries -> {
-      log.info("HealthCheckEntries: {}", entries);
+      log.debug("HealthCheckEntries: {}", entries);
       JsonArray checks = entries.getJsonArray("checks");
       if ("UP".equalsIgnoreCase(entries.getString("outcome"))) {
         healthCheckStatusRef.set(HealthcheckStatus.healthy);
       } else {
         healthCheckStatusRef.set(HealthcheckStatus.unhealthy);
       }
-      log.info("HealthCheckStatus: {}; NoOfChecks: {}", healthCheckStatusRef.get(), checks.size());
+      log.debug("HealthCheckStatus: {}; NoOfChecks: {}", healthCheckStatusRef.get(), checks.size());
     });
     return healthCheckStatusRef.get();
   }
